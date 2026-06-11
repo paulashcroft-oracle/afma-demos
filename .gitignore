@@ -4,5 +4,9 @@
 .oci/
 *.log
 *.tmp
+__pycache__/
 Thumbs.db
 Desktop.ini
+Data/*.xls
+Data/*.xlsx
+Data/*.csv
