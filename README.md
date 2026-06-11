@@ -28,6 +28,7 @@ This repository holds the replayable source assets for the first AFMA APEX demo 
 - Database scripts: [`database/`](database/)
 - Local data helpers: [`tools/`](tools/)
 - Demo access: `database/050_add_demo_user_login.sql` adds the passwordless `DEMO_USER` login button on the AFMA app login page.
+- Feedback model: `database/085_enable_ai_hub_feedback_model.sql` adds native APEX Feedback capture and the controlled AI Hub source-feedback bridge.
 
 Live AIDEMODB target:
 
@@ -38,3 +39,4 @@ Live AIDEMODB target:
 - Loaded CAAB rows: `63,191`
 - Common names and regional aliases: `10,376`
 - Workspace AI services available to the Agent page: `9`
+- Feedback capture: native APEX Feedback bubble/modal verified for `DEMO_USER`; AI Hub forwarding objects installed and controlled/dormant pending the live source-feedback API key and endpoint reachability check

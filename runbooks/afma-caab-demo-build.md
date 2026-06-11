@@ -1,6 +1,6 @@
 # AFMA CAAB Demo Build Runbook
 
-This runbook tracks the first AFMA demo application slice for AI Hub tasks `afma-001` through `afma-008`.
+This runbook tracks the first AFMA demo application slice for AI Hub tasks `afma-001` through `afma-009`.
 
 Live target:
 
@@ -39,6 +39,8 @@ Run these scripts in the `AFMA` APEX workspace SQL Commands session or as the `A
 6. `database/045_create_csiro_caab_report_views.sql`
 7. `database/050_add_demo_user_login.sql`
 8. `database/080_configure_afma_caab_app_pages.sql`
+9. `database/085_enable_ai_hub_feedback_model.sql`
+10. `database/086_verify_ai_hub_feedback_model.sql`
 
 The loader expects a CSV version of the CAAB workbook because the source workbook is Excel 97 `.xls`.
 
@@ -133,6 +135,25 @@ Runtime smoke test:
 2. Click `Continue as Demo User`.
 3. Confirm the browser redirects to `/home` and `apex.env.APP_USER` is `DEMO_USER`.
 
+## AI Hub Feedback Model
+
+`database/085_enable_ai_hub_feedback_model.sql` follows the shared AI Hub/GovernMate feedback pattern for AFMA:
+
+- enables a visible `Feedback` entry in the app navigation bar;
+- adds modal pages `10030` and `10031` that call native `APEX_UTIL.SUBMIT_FEEDBACK`;
+- adds `AI_HUB_FEEDBACK_FORWARDS` as the local AFMA forwarding ledger;
+- adds `AI_HUB_FEEDBACK_CANDIDATES_V` over native `APEX_TEAM_FEEDBACK` for app `101`;
+- adds package `AFMA_AI_HUB_FORWARDER` to build the AI Hub source-feedback payload and call `POST /projects/afma/feedback`;
+- creates APEX Web Credential metadata `AI_HUB_AFMA_FEEDBACK_API` without storing the raw API key in Git; and
+- stores the project Kanban URL, public board URL, feedback endpoint URL, and credential static id in `CSIRO_CAAB_CONFIG`.
+
+Important deployment boundary:
+
+- The raw `afma-apex-feedback` API key must be set only in the live APEX Web Credential or another approved secret store.
+- The current endpoint is `https://apex.oraclecorp.com/pls/apex/ashcroft/ai-hub-api/v1/projects/afma/feedback`.
+- As seen in the GovernMate proof, AIDEMODB server-side PL/SQL may not be able to reach the ASHCROFT `apex.oraclecorp.com` endpoint. Treat `AFMA_AI_HUB_FORWARDER` as installed and ready but controlled/dormant until the credential and database-reachable endpoint are verified.
+- Do not schedule automatic forwarding until `database/086_verify_ai_hub_feedback_model.sql`, a read-only endpoint health check, and one idempotent `AFMA_AI_HUB_FORWARDER.FORWARD_FEEDBACK` smoke test pass without exposing secrets.
+
 ## Verification
 
 Minimum checks before moving the build tasks to Test:
@@ -150,6 +171,10 @@ Minimum checks before moving the build tasks to Test:
 - Page 3 renders summary cards and visual reports; live smoke test observed `15` chart/SVG elements.
 - Login page 9999 displays `Continue as Demo User` and still displays the normal login fields.
 - Clicking `Continue as Demo User` signs in as `DEMO_USER` without entering a password and redirects to page 1.
+- Navigation bar displays `Feedback` for authenticated users when APEX feedback is enabled.
+- Page `10030` submits native APEX feedback and page `10031` confirms capture.
+- `AFMA_AI_HUB_FORWARDER`, `AI_HUB_FEEDBACK_FORWARDS`, and `AI_HUB_FEEDBACK_CANDIDATES_V` are valid.
+- APEX Web Credential metadata `AI_HUB_AFMA_FEEDBACK_API` exists; the raw key is not stored in the repository.
 - AI Hub project metadata is updated with confirmed app ID, runtime URL, and builder URL.
 
 ## Live Verification On 2026-06-11
@@ -159,9 +184,28 @@ Minimum checks before moving the build tasks to Test:
 - Reports page as `DEMO_USER`: rendered summary cards and `15` chart/SVG elements.
 - Agent page as `DEMO_USER`: model dropdown displayed all nine services; NSW prompt returned `jewfish`, `jewie`, and `mulla` without passworded access.
 
+## Feedback Verification On 2026-06-12
+
+- Replayed `database/085_enable_ai_hub_feedback_model.sql` in AFMA SQL Commands.
+- Saved `085_enable_ai_hub_feedback_model.sql` and `086_verify_ai_hub_feedback_model.sql` into APEX SQL Scripts.
+- `database/086_verify_ai_hub_feedback_model.sql` verified:
+  - `AFMA_AI_HUB_FORWARDER` package/body, `AI_HUB_FEEDBACK_FORWARDS`, and `AI_HUB_FEEDBACK_CANDIDATES_V` are valid.
+  - APEX Web Credential metadata `AI_HUB_AFMA_FEEDBACK_API` exists for `https://apex.oraclecorp.com/pls/apex/ashcroft/ai-hub-api/v1/`.
+  - Config rows exist for the AFMA AI Hub Kanban URL, public board URL, feedback endpoint URL, and credential static id.
+  - Pages `10030` and `10031` exist as modal dialog feedback pages.
+  - Navigation Bar entry `Feedback` targets page `10030`, uses icon `fa-comment-o`, renders as `icon-only`, and is conditioned by `apex_util.feedback_enabled`.
+- Runtime verified as `demo_user`: the feedback bubble appears in the top-right navigation beside the current user, opens the `Feedback` modal, and submits native APEX feedback through `APEX_UTIL.SUBMIT_FEEDBACK`.
+- `AI_HUB_FEEDBACK_CANDIDATES_V` reported `1` pending feedback candidate after the verification submission.
+- Do not mark the AFMA feedback bridge as automatically forwarding until the `AI_HUB_AFMA_FEEDBACK_API` raw key and AIDEMODB-to-AI-Hub endpoint reachability are verified.
+
 ## Captured Exports
 
 Captured from AIDEMODB workspace `AFMA` on 2026-06-11:
 
 - APEX application export: `exports/f101_afma_caab_ai_demo_20260611.sql`
 - APEX SQL Scripts export: `exports/afma_caab_sql_scripts_20260611.sql`
+
+Captured from AIDEMODB workspace `AFMA` on 2026-06-12 after feedback-model verification:
+
+- APEX application export: `exports/f101_afma_caab_ai_demo_20260612.sql`
+- APEX SQL Scripts export: `exports/afma_caab_sql_scripts_20260612.sql`
