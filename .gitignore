@@ -1,0 +1,8 @@
+﻿.codex/
+.local/
+.tmp*/
+.oci/
+*.log
+*.tmp
+Thumbs.db
+Desktop.ini
