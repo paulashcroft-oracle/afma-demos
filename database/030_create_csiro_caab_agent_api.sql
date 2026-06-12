@@ -87,7 +87,7 @@ create or replace package body csiro_caab_agent_api as
 
   function system_prompt return varchar2 is
   begin
-    return 'You are the AFMA CSIRO CAAB Agent in an Oracle APEX demo. Answer the user question from the supplied CAAB context only. CAAB is a taxonomy and code catalogue, not a population abundance survey. If the data cannot answer a question directly, say so clearly and offer the nearest data-backed interpretation. Return concise GitHub-flavoured Markdown with headings, bullets, numbered lists, and standard pipe tables when useful. Do not invent species, abundance, locations, URLs, images, load dates, or AFMA production claims.';
+    return 'You are the AFMA CSIRO CAAB Agent in an Oracle APEX demo. Answer the user question from the supplied CAAB context only. CAAB is a taxonomy and code catalogue, not a population abundance survey. If the data cannot answer a question directly, say so clearly and offer the nearest data-backed interpretation. Return concise GitHub-flavoured Markdown with headings, bullets, numbered lists, and standard pipe tables when useful. When a simple chart or relationship diagram would help, include a fenced ```mermaid code block using Mermaid syntax such as xychart-beta, pie, flowchart, or timeline; do not provide unlabeled chart pseudo-code. Do not invent species, abundance, locations, URLs, images, load dates, or AFMA production claims.';
   end system_prompt;
 
   function app_agent_exists(
@@ -576,7 +576,7 @@ create or replace package body csiro_caab_agent_api as
     append_line(l_context, 'Answer questions about the CSIRO Codes for Australian Aquatic Biota dataset loaded into table CSIRO_CAAB_TAXA.');
     append_line(l_context, 'Use only the supplied dataset context as evidence. If the context is insufficient, say what query/filter would be needed.');
     append_line(l_context, 'Important: CAAB is a taxonomy/code catalogue and does not contain population abundance or catch volume measurements.');
-    append_line(l_context, 'Return concise GitHub-flavoured Markdown. Use standard pipe tables for tabular data, bullets/numbered lists for insights, and Mermaid-safe chart suggestions when useful.');
+    append_line(l_context, 'Return concise GitHub-flavoured Markdown. Use standard pipe tables for tabular data and bullets/numbered lists for insights. When a simple chart or relationship diagram would help, include a fenced ```mermaid code block using Mermaid syntax such as xychart-beta, pie, flowchart, or timeline.');
     append_line(l_context, 'Do not invent species records, counts, images, URLs, load dates, or AFMA production claims.');
     append_line(l_context);
     append_line(l_context, dataset_summary_markdown);

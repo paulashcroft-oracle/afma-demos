@@ -168,6 +168,9 @@ Minimum checks before moving the build tasks to Test:
 - Page 2 accepts a prompt such as `Show me jewfish and mulloway names used around NSW and include any local nicknames.` and returns rich output with `jewfish`, `jewie`, and `mulla` near the top of the common-name table.
 - Page 2 model dropdown lists the nine workspace OCI Generative AI Services.
 - Page 2 displays the CSIRO source refresh/download component.
+- Page 2 keeps the agent title/model selector pinned at the top of the agent viewport, keeps the prompt composer pinned at the bottom, and lets the chat thread scroll in the remaining space on desktop and mobile.
+- Page 2 submits the prompt when the user presses `Enter`; `Shift+Enter` inserts a new line.
+- Page 2 renders supported fenced Mermaid diagrams to SVG, with escaped source fallback if the Mermaid runtime cannot load.
 - Page 3 renders summary cards and visual reports; live smoke test observed `15` chart/SVG elements.
 - Login page 9999 displays `Continue as Demo User` and still displays the normal login fields.
 - Clicking `Continue as Demo User` signs in as `DEMO_USER` without entering a password and redirects to page 1.
@@ -208,6 +211,16 @@ Minimum checks before moving the build tasks to Test:
 - Markdown rendering supports headings, lists, blockquotes, horizontal rules, fenced code, inline code, bold, italics, HTTP links, images, standard pipe tables, and loose pipe tables. Parser failures fall back to escaped preformatted text.
 - Human chat messages are right-aligned at roughly 80 percent of the thread width to visually separate user prompts from agent responses. Runtime layout verification observed `widthRatio = 0.776` and `leftOffsetRatio = 0.209` in the live page.
 
+## Responsive Agent Verification On 2026-06-12
+
+- Replayed `database/030_create_csiro_caab_agent_api.sql`, `database/040_create_csiro_caab_page_api.sql`, and `database/090_configure_afma_caab_ai_configs.sql` in workspace `AFMA`.
+- Saved the updated scripts into APEX SQL Scripts.
+- Page 2 keeps the title/actions/model selector pinned above the chat flow and the prompt composer pinned at the bottom of the agent viewport.
+- Desktop verification at `1280x900` observed `headAboveThread = true`, `threadAboveComposer = true`, `composerNearViewportBottom = true`, `threadScrollableSpace = true`, and `promptVisible = true`.
+- Mobile verification at `390x844` observed the same layout checks as `true`.
+- Runtime keyboard verification observed `enterFired = true`; `Shift+Enter` remains reserved for multi-line prompts.
+- Runtime rendering verification observed `tableCount = 1` and Mermaid `status = Y`, `hasSvg = true` for a fenced `mermaid` response block.
+
 ## Captured Exports
 
 Captured from AIDEMODB workspace `AFMA` on 2026-06-11:
@@ -224,3 +237,8 @@ Captured from AIDEMODB workspace `AFMA` on 2026-06-12 after live AI and renderin
 
 - APEX application export: `exports/f101_afma_caab_ai_demo_20260612_ai_agent_rendering_fix.sql`
 - APEX SQL Scripts export: `exports/afma_caab_sql_scripts_20260612_ai_agent_rendering_fix.sql`
+
+Captured from AIDEMODB workspace `AFMA` on 2026-06-12 after responsive layout and Mermaid verification:
+
+- APEX application export: `exports/f101_afma_caab_ai_demo_20260612_responsive_mermaid.sql`
+- APEX SQL Scripts export: `exports/afma_caab_sql_scripts_20260612_responsive_mermaid.sql`
