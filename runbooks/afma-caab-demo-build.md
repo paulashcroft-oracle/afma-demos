@@ -198,6 +198,16 @@ Minimum checks before moving the build tasks to Test:
 - `AI_HUB_FEEDBACK_CANDIDATES_V` reported `1` pending feedback candidate after the verification submission.
 - Do not mark the AFMA feedback bridge as automatically forwarding until the `AI_HUB_AFMA_FEEDBACK_API` raw key and AIDEMODB-to-AI-Hub endpoint reachability are verified.
 
+## AI Agent Verification On 2026-06-12
+
+- Replayed `database/030_create_csiro_caab_agent_api.sql`, `database/040_create_csiro_caab_page_api.sql`, and `database/090_configure_afma_caab_ai_configs.sql` in workspace `AFMA`.
+- Saved the updated scripts into APEX SQL Scripts.
+- Page 2 now calls live `APEX_AI.CHAT` via app AI Config static IDs instead of always returning the deterministic fallback.
+- Runtime prompt `What is the most populous species?` returned a live model answer that correctly explained CAAB is a taxonomy/code catalogue, not an abundance survey.
+- Runtime prompt requesting shark records as a Markdown table rendered an HTML table in the answer area; verification observed `answerOnlyTableCount = 1` and `rawPipeTableVisible = false`.
+- Markdown rendering supports headings, lists, blockquotes, horizontal rules, fenced code, inline code, bold, italics, HTTP links, images, standard pipe tables, and loose pipe tables. Parser failures fall back to escaped preformatted text.
+- Human chat messages are right-aligned at roughly 80 percent of the thread width to visually separate user prompts from agent responses. Runtime layout verification observed `widthRatio = 0.776` and `leftOffsetRatio = 0.209` in the live page.
+
 ## Captured Exports
 
 Captured from AIDEMODB workspace `AFMA` on 2026-06-11:
@@ -209,3 +219,8 @@ Captured from AIDEMODB workspace `AFMA` on 2026-06-12 after feedback-model verif
 
 - APEX application export: `exports/f101_afma_caab_ai_demo_20260612.sql`
 - APEX SQL Scripts export: `exports/afma_caab_sql_scripts_20260612.sql`
+
+Captured from AIDEMODB workspace `AFMA` on 2026-06-12 after live AI and rendering verification:
+
+- APEX application export: `exports/f101_afma_caab_ai_demo_20260612_ai_agent_rendering_fix.sql`
+- APEX SQL Scripts export: `exports/afma_caab_sql_scripts_20260612_ai_agent_rendering_fix.sql`

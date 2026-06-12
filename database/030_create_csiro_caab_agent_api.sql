@@ -85,13 +85,17 @@ create or replace package body csiro_caab_agent_api as
     return trim(dbms_lob.substr(p_user_prompt, 500, 1));
   end compact_prompt;
 
+  function system_prompt return varchar2 is
+  begin
+    return 'You are the AFMA CSIRO CAAB Agent in an Oracle APEX demo. Answer the user question from the supplied CAAB context only. CAAB is a taxonomy and code catalogue, not a population abundance survey. If the data cannot answer a question directly, say so clearly and offer the nearest data-backed interpretation. Return concise GitHub-flavoured Markdown with headings, bullets, numbered lists, and standard pipe tables when useful. Do not invent species, abundance, locations, URLs, images, load dates, or AFMA production claims.';
+  end system_prompt;
+
   function app_agent_exists(
     p_agent_static_id in varchar2
   ) return boolean is
     l_count number;
-    l_app_id number := to_number(coalesce(v('APP_ID'), '0'));
   begin
-    if l_app_id = 0 or p_agent_static_id is null then
+    if p_agent_static_id is null then
       return false;
     end if;
 
@@ -102,13 +106,37 @@ create or replace package body csiro_caab_agent_api as
          and upper(agent_static_id) = upper(:agent_static_id)
     ]'
       into l_count
-      using l_app_id, p_agent_static_id;
+      using 101, p_agent_static_id;
 
     return l_count > 0;
   exception
     when others then
       return false;
   end app_agent_exists;
+
+  function valid_ai_config_static_id(
+    p_config_static_id in varchar2
+  ) return varchar2 is
+    l_static_id varchar2(255);
+  begin
+    if p_config_static_id is null then
+      return null;
+    end if;
+
+    select config_static_id
+      into l_static_id
+      from apex_appl_ai_configs
+     where application_id = 101
+       and upper(config_static_id) = upper(trim(p_config_static_id))
+       fetch first 1 row only;
+
+    return l_static_id;
+  exception
+    when no_data_found then
+      return null;
+    when others then
+      return null;
+  end valid_ai_config_static_id;
 
   function valid_service_static_id(
     p_service_static_id in varchar2
@@ -189,7 +217,7 @@ create or replace package body csiro_caab_agent_api as
            l_regions
       from csiro_caab_common_names;
 
-    select max(to_char(loaded_at, 'YYYY-MM-DD HH24:MI TZH:TZM'))
+    select max(to_char(loaded_at, 'YYYY-MM-DD HH24:MI:SS'))
       into l_last_load
       from csiro_caab_loads
      where load_status = 'LOADED';
@@ -236,9 +264,9 @@ create or replace package body csiro_caab_agent_api as
 
     for r in (
       with raw_tokens as (
-        select lower(regexp_substr(l_query, '[[:alnum:]_''-]{3,}', 1, level)) token
+        select lower(regexp_substr(l_query, '[[:alnum:]_]{3,}', 1, level)) token
           from dual
-       connect by level <= least(12, regexp_count(l_query, '[[:alnum:]_''-]{3,}'))
+       connect by level <= least(12, regexp_count(l_query, '[[:alnum:]_]{3,}'))
       ),
       tokens as (
         select token
@@ -246,7 +274,8 @@ create or replace package body csiro_caab_agent_api as
          where token not in (
            'about','after','all','and','any','are','around','ask','caab','code','codes',
            'data','demo','find','for','from','give','including','include','info','into',
-           'list','me','name','names','please','show','species','tell','that','the',
+           'common','list','me','name','names','please','record','records','related',
+           'show','species','status','summarise','summarize','tell','that','the',
            'this','used','using','want','what','when','where','which','with'
          )
       )
@@ -347,9 +376,9 @@ create or replace package body csiro_caab_agent_api as
 
     for r in (
       with raw_tokens as (
-        select lower(regexp_substr(l_query, '[[:alnum:]_''-]{3,}', 1, level)) token
+        select lower(regexp_substr(l_query, '[[:alnum:]_]{3,}', 1, level)) token
           from dual
-       connect by level <= least(12, regexp_count(l_query, '[[:alnum:]_''-]{3,}'))
+       connect by level <= least(12, regexp_count(l_query, '[[:alnum:]_]{3,}'))
       ),
       tokens as (
         select token
@@ -357,7 +386,8 @@ create or replace package body csiro_caab_agent_api as
          where token not in (
            'about','after','all','and','any','are','around','ask','caab','code','codes',
            'data','demo','find','for','from','give','including','include','info','into',
-           'list','me','name','names','please','show','species','tell','that','the',
+           'common','list','me','name','names','please','record','records','related',
+           'show','species','status','summarise','summarize','tell','that','the',
            'this','used','using','want','what','when','where','which','with'
          )
       )
@@ -545,7 +575,8 @@ create or replace package body csiro_caab_agent_api as
     append_line(l_context, 'You are the CSIRO CAAB Agent for an AFMA APEX demo running on Oracle Autonomous Database 26ai.');
     append_line(l_context, 'Answer questions about the CSIRO Codes for Australian Aquatic Biota dataset loaded into table CSIRO_CAAB_TAXA.');
     append_line(l_context, 'Use only the supplied dataset context as evidence. If the context is insufficient, say what query/filter would be needed.');
-    append_line(l_context, 'Return concise Markdown. You may include simple Markdown tables, bullet lists, and Mermaid-safe chart suggestions.');
+    append_line(l_context, 'Important: CAAB is a taxonomy/code catalogue and does not contain population abundance or catch volume measurements.');
+    append_line(l_context, 'Return concise GitHub-flavoured Markdown. Use standard pipe tables for tabular data, bullets/numbered lists for insights, and Mermaid-safe chart suggestions when useful.');
     append_line(l_context, 'Do not invent species records, counts, images, URLs, load dates, or AFMA production claims.');
     append_line(l_context);
     append_line(l_context, dataset_summary_markdown);
@@ -554,9 +585,9 @@ create or replace package body csiro_caab_agent_api as
 
     for r in (
       with raw_tokens as (
-        select lower(regexp_substr(l_query, '[[:alnum:]_''-]{3,}', 1, level)) token
+        select lower(regexp_substr(l_query, '[[:alnum:]_]{3,}', 1, level)) token
           from dual
-       connect by level <= least(12, regexp_count(l_query, '[[:alnum:]_''-]{3,}'))
+       connect by level <= least(12, regexp_count(l_query, '[[:alnum:]_]{3,}'))
       ),
       tokens as (
         select token
@@ -564,7 +595,8 @@ create or replace package body csiro_caab_agent_api as
          where token not in (
            'about','after','all','and','any','are','around','ask','caab','code','codes',
            'data','demo','find','for','from','give','including','include','info','into',
-           'list','me','name','names','please','show','species','tell','that','the',
+           'common','list','me','name','names','please','record','records','related',
+           'show','species','status','summarise','summarize','tell','that','the',
            'this','used','using','want','what','when','where','which','with'
          )
       )
@@ -650,9 +682,9 @@ create or replace package body csiro_caab_agent_api as
 
     for r in (
       with raw_tokens as (
-        select lower(regexp_substr(l_query, '[[:alnum:]_''-]{3,}', 1, level)) token
+        select lower(regexp_substr(l_query, '[[:alnum:]_]{3,}', 1, level)) token
           from dual
-       connect by level <= least(12, regexp_count(l_query, '[[:alnum:]_''-]{3,}'))
+       connect by level <= least(12, regexp_count(l_query, '[[:alnum:]_]{3,}'))
       ),
       tokens as (
         select token
@@ -660,7 +692,8 @@ create or replace package body csiro_caab_agent_api as
          where token not in (
            'about','after','all','and','any','are','around','ask','caab','code','codes',
            'data','demo','find','for','from','give','including','include','info','into',
-           'list','me','name','names','please','show','species','tell','that','the',
+           'common','list','me','name','names','please','record','records','related',
+           'show','species','status','summarise','summarize','tell','that','the',
            'this','used','using','want','what','when','where','which','with'
          )
       )
@@ -758,28 +791,41 @@ create or replace package body csiro_caab_agent_api as
     p_error       out varchar2
   ) return clob is
     l_agent_static_id varchar2(255) := coalesce(config_value('AI_AGENT_STATIC_ID'), 'AFMA_CAAB_AGENT');
+    l_config_static_id varchar2(255);
     l_service_static_id varchar2(255);
     l_prompt clob;
     l_response clob;
+    l_messages apex_ai.t_chat_messages := apex_ai.c_chat_messages;
   begin
     p_error := null;
     l_prompt := build_ai_context(p_user_prompt);
+    l_config_static_id := coalesce(
+      valid_ai_config_static_id(p_service_static_id),
+      valid_ai_config_static_id(config_value('AI_CONFIG_STATIC_ID')),
+      valid_ai_config_static_id(config_value('AI_SERVICE_STATIC_ID'))
+    );
     l_service_static_id := coalesce(
       valid_service_static_id(p_service_static_id),
       valid_service_static_id(config_value('AI_SERVICE_STATIC_ID'))
     );
 
+    if l_config_static_id is not null then
+      l_response := apex_ai.chat(
+        p_config_static_id => l_config_static_id,
+        p_prompt => l_prompt,
+        p_messages => l_messages
+      );
+      return l_response;
+    end if;
+
     if l_service_static_id is not null then
-      execute immediate q'[
-        begin
-          :result := apex_ai.chat(
-            p_prompt => :prompt,
-            p_service_static_id => :service_static_id,
-            p_temperature => 0.2
-          );
-        end;
-      ]'
-        using out l_response, in l_prompt, in l_service_static_id;
+      l_response := apex_ai.chat(
+        p_prompt => l_prompt,
+        p_system_prompt => system_prompt,
+        p_service_static_id => l_service_static_id,
+        p_temperature => 0.2,
+        p_messages => l_messages
+      );
       return l_response;
     end if;
 
@@ -788,15 +834,16 @@ create or replace package body csiro_caab_agent_api as
         begin
           :result := apex_ai.chat(
             p_agent_static_id => :agent_static_id,
-            p_prompt => :prompt
+            p_prompt => :prompt,
+            p_messages => :messages
           );
         end;
       ]'
-        using out l_response, in l_agent_static_id, in l_prompt;
+        using out l_response, in l_agent_static_id, in l_prompt, in out l_messages;
       return l_response;
     end if;
 
-    p_error := 'No valid AFMA APEX Generative AI Service or AI Agent is configured for this request.';
+    p_error := 'No valid AFMA APEX AI Configuration, Generative AI Service, or AI Agent is configured for this request.';
     return null;
   exception
     when others then
