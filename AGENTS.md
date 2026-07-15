@@ -1,6 +1,9 @@
-﻿# Project Instructions
+<!-- codex-projects-shared-guidance:v1 -->
+# AFMA Demos Instructions
 
-Read `../AGENTS.md` first. It is the canonical instruction file for all Codex demo projects.
+Read `../AGENTS.md` first. It is the canonical shared instruction file for every project under `Codex Projects`.
+
+This file contains only project-specific additions or explicit exceptions. Shared rules belong in the parent or routed standards, not in this file.
 
 ## AFMA Demo Notes
 
@@ -15,3 +18,8 @@ Read `../AGENTS.md` first. It is the canonical instruction file for all Codex de
 - Keep verified source scripts, runbooks, readiness checks, and dated exports in git.
 - Leave unrelated local changes untouched unless explicitly asked.
 - Use PRs for substantial verified changes into `main`.
+
+## Project Credential References
+
+- `Shared Credentials\logins\afma-geoscience-demo-user.local.json`
+- `Shared Credentials\api-keys\ai-hub\codex-afma.local.json`
