@@ -1,0 +1,24 @@
+genAIService xai_grok_4_3 (
+    name: xai.grok-4.3
+    provider: ociGenAI
+    endpointUrl {
+        url: https://inference.generativeai.us-chicago-1.oci.oraclecloud.com
+    }
+    authentication {
+        credentials: @genai_credentials
+    }
+    additionalData {
+        attributes:
+            ```
+            {
+              "compartmentId" : "ocid1.compartment.oc1..aaaaaaaadktw3nngmwhpv6eesplpofqhvgcij6ilcwdciunprkgchekld2dq",
+              "servingMode" :
+              {
+                "modelId" : "xai.grok-4.3",
+                "servingType" : "ON_DEMAND"
+              }
+            }
+            ```
+    }
+)
+

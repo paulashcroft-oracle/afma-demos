@@ -1,0 +1,24 @@
+genAIService openai_gpt_oss_20b (
+    name: openai.gpt-oss-20b
+    provider: ociGenAI
+    endpointUrl {
+        url: https://inference.generativeai.us-chicago-1.oci.oraclecloud.com
+    }
+    authentication {
+        credentials: @genai_credentials
+    }
+    additionalData {
+        attributes:
+            ```
+            {
+              "compartmentId" : "ocid1.compartment.oc1..aaaaaaaadktw3nngmwhpv6eesplpofqhvgcij6ilcwdciunprkgchekld2dq",
+              "servingMode" :
+              {
+                "modelId" : "openai.gpt-oss-20b",
+                "servingType" : "ON_DEMAND"
+              }
+            }
+            ```
+    }
+)
+

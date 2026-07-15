@@ -1,0 +1,24 @@
+genAIService cohere_command_latest (
+    name: cohere.command-latest
+    provider: ociGenAI
+    endpointUrl {
+        url: https://inference.generativeai.us-chicago-1.oci.oraclecloud.com
+    }
+    authentication {
+        credentials: @genai_credentials
+    }
+    additionalData {
+        attributes:
+            ```
+            {
+              "compartmentId" : "ocid1.compartment.oc1..aaaaaaaadktw3nngmwhpv6eesplpofqhvgcij6ilcwdciunprkgchekld2dq",
+              "servingMode" :
+              {
+                "modelId" : "cohere.command-latest",
+                "servingType" : "ON_DEMAND"
+              }
+            }
+            ```
+    }
+)
+

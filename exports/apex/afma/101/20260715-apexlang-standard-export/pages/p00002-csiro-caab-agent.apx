@@ -1,0 +1,64 @@
+page 2 (
+    name: CSIRO CAAB Agent
+    alias: CSIRO-CAAB-AGENT
+    title: CSIRO CAAB Agent
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region csiro-caab-agent (
+        name: CSIRO CAAB Agent
+        type: dynamicContent
+        source {
+            plsqlFunctionBody: return csiro_caab_page_api.agent_html;
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        advanced {
+            htmlDomId: afma-caab-agent
+        }
+    )
+
+    process csiro-caab-agent-ask (
+        name: CSIRO_CAAB_AGENT_ASK
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                begin
+                  htp.prn(
+                    csiro_caab_agent_api.ask_json(
+                      p_user_prompt => apex_application.g_x01,
+                      p_service_static_id => apex_application.g_x02
+                    )
+                  );
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 10
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 1010800202
+        }
+    )
+
+)
+

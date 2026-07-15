@@ -1,0 +1,263 @@
+page 10030 (
+    name: Feedback
+    alias: FEEDBACK
+    title: Feedback
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 480
+        chained: false
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    css {
+        inline:
+            ```css
+            .feedback-positive,.feedback-negative,.feedback-neutral{padding:8px;border-radius:100%;background-color:white;margin:4px;}
+            .feedback-positive{color:var(--ut-feedback-positive-text-color,var(--ut-palette-success));}
+            .feedback-neutral{color:var(--ut-feedback-neutral-text-color,var(--ut-palette-warning));}
+            .feedback-negative{color:var(--ut-feedback-negative-text-color,var(--ut-palette-danger));}
+            .afma-feedback-actions{display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;}
+            ```
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="afma-feedback-actions">
+                <button type="button" class="t-Button" onclick="apex.navigation.dialog.cancel(true)">Cancel</button>
+                <button type="button" class="t-Button t-Button--hot" onclick="apex.submit({request:'SUBMIT',validate:true})">Submit Feedback</button>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 20
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region form-on-feedback (
+        name: Form on Feedback
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: [
+                #DEFAULT#
+                t-Form--stretchInputs
+            ]
+        }
+    )
+
+    pageItem P10030_FEEDBACK (
+        type: textarea
+        label {
+            label: Feedback
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @form-on-feedback
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            width: 64
+            height: 4
+        }
+        validation {
+            maxLength: 4000
+        }
+    )
+
+    pageItem P10030_PAGE_ID (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @form-on-feedback
+            slot: regionBody
+        }
+        source {
+            used: always
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P10030_RATING (
+        type: radioGroup
+        label {
+            label: Experience
+            alignment: left
+        }
+        settings {
+            noOfCols: 3
+        }
+        lov {
+            type: sharedComponent
+            lov: @feedback-rating
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 30
+            region: @form-on-feedback
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: [
+                #DEFAULT#
+                t-Form-fieldContainer--radioButtonGroup
+            ]
+        }
+        security {
+            escapeSpecialChars: false
+        }
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Cancel
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: EDIT
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+            executeValidations: false
+        }
+    )
+
+    button submit (
+        buttonName: SUBMIT
+        label: Submit Feedback
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: CREATE
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--gapLeft
+            ]
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    dynamicAction cancel-dialog (
+        name: Cancel Dialog
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    validation at-least-one-feedback-required (
+        name: At least One Feedback Required
+        execution {
+            sequence: 10
+        }
+        validation {
+            type: functionBodyReturningBoolean
+            plsqlFunctionBody:
+                ```plsql
+                if :P10030_FEEDBACK is null and :P10030_RATING is null then
+                  return false;
+                else
+                  return true;
+                end if;
+                ```
+        }
+        error {
+            errorMessage: Please provide feedback or choose an experience.
+            displayLocation: inlineInNotification
+        }
+    )
+
+    process submit-feedback (
+        name: Submit Feedback
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  apex_util.submit_feedback(
+                    p_comment        => :P10030_FEEDBACK,
+                    p_application_id => :APP_ID,
+                    p_page_id        => :P10030_PAGE_ID,
+                    p_rating         => :P10030_RATING
+                  );
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        successMessage {
+            successMessage: Feedback submitted
+        }
+        advanced {
+            executionMappingIdentifier: 1010850316
+        }
+    )
+
+    branch (
+        execution {
+            sequence: 10
+        }
+        behavior {
+            target: {
+                page: 10031
+                action: resetPagination
+                successMessage: false
+            }
+        }
+    )
+
+)
+
