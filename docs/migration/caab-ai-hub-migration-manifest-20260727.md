@@ -49,7 +49,7 @@ provisioned separately.
 | Application ID/name/alias | Source context stale; APEXlang/runbook prove `101` / `AFMA CAAB AI Demo` / `AFMA-CAAB-AI-DEMO` | Same | Correct the stale source project record during target creation. |
 | Runtime URL | Source project record says pending; runbook records AIDEMODB runtime `/ords/r/afma/afma-caab-ai-demo/home` | Same runtime URL | Deliberate correction from stale ASHCROFT metadata to confirmed AIDEMODB app route. |
 | Builder URL | Source project record says pending; runbook records app-builder URL with `fb_flow_id=101` | Same builder location, without a reusable `session=` value | Deliberate correction; verify URL pattern only. |
-| Notes | AFMA workspace bootstrapping notes, stale “app pending” statement | CAAB-specific provenance, app 101 source checkpoint, target API activation prerequisite and data-load notes | Do not copy stale status or raw endpoints/keys. |
+| Notes | AFMA workspace bootstrapping notes, stale "app pending" statement | CAAB-specific provenance, app 101 source checkpoint, target API activation prerequisite and data-load notes | Do not copy stale status or raw endpoints/keys. |
 | System-design linkage | Project-scoped source design query is denied by the captured AFMA key | Link/import only designs returned by the target `caab` discovery/bootstrap and applicable AI Hub design APIs | Deliberate deferred linkage; source response is an authorization limitation, not a negative assertion. |
 
 ## Kanban migration inventory
@@ -93,8 +93,8 @@ the control plane is available.
   `085`, `086` under `database/`.
 - Data acceptance values: `CSIRO_CAAB_TAXA=63191`, active taxa `51213`,
   `CSIRO_CAAB_COMMON_NAMES=10376`, `CSIRO_CAAB_FISHING_REGIONS=17`.
-- Application metadata—including AI agents, login/feedback UI, navigation and
-  static files—comes from the APEXlang checkpoint. Secrets and workspace GenAI
+- Application metadata - including AI agents, login/feedback UI, navigation and
+  static files - comes from the APEXlang checkpoint. Secrets and workspace GenAI
   service definitions are provisioned only in the target workspace.
 
 ## Target activation and deterministic verification
