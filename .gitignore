@@ -10,3 +10,5 @@ Desktop.ini
 Data/*.xls
 Data/*.xlsx
 Data/*.csv
+exports/apex/**/workspace-components/credentials/
+exports/apex/**/workspace-components/generative-ai-services/
