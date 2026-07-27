@@ -11,7 +11,9 @@ This file contains only project-specific additions or explicit exceptions. Share
 - Use it to hold verified AFMA database scripts, APEX exports, runbooks, readiness checks, and integration assets as the project is established.
 - AI Hub task `ai-hub-092` is the onboarding record for this project.
 - The target APEX workspace is `AFMA` in AIDEMODB once the workspace is created and verified.
-- Keep schema name, application IDs, runtime URLs, and builder links precise once they are confirmed; do not guess them into source files.
+- The current AIDEMODB application is app `101`, `AFMA CAAB AI Demo`, alias `AFMA-CAAB-AI-DEMO`.
+- AIDEMODB AI Hub uses the application-based project key `caab` for app `101`. Use `codex-caab`, not `codex-afma`, for the CAAB Kanban, tasks, task bundles, System Designs, and application feedback/API work.
+- Keep schema name, application IDs, runtime URLs, builder links, AI Hub project keys, and credential filenames precise once they are confirmed; do not guess them into source files.
 
 ## Local Workflow
 
@@ -22,4 +24,5 @@ This file contains only project-specific additions or explicit exceptions. Share
 ## Project Credential References
 
 - `Shared Credentials\logins\afma-geoscience-demo-user.local.json`
-- `Shared Credentials\api-keys\ai-hub\codex-afma.local.json`
+- `Shared Credentials\api-keys\ai-hub\codex-caab-aidemodb.local.json` — AIDEMODB app `101` / AI Hub project `caab`
+- `Shared Credentials\api-keys\ai-hub\codex-afma.local.json` — legacy ASHCROFT source only; never use or repoint it for AIDEMODB
