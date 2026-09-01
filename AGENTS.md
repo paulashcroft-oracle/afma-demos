@@ -23,6 +23,6 @@ This file contains only project-specific additions or explicit exceptions. Share
 
 ## Project Credential References
 
-- `Shared Credentials\logins\afma-geoscience-demo-user.local.json`
-- `Shared Credentials\api-keys\ai-hub\codex-caab-aidemodb.local.json` — AIDEMODB app `101` / AI Hub project `caab`
-- `Shared Credentials\api-keys\ai-hub\codex-afma.local.json` — legacy ASHCROFT source only; never use or repoint it for AIDEMODB
+- `Shared Credentials/logins/afma-geoscience-demo-user.local.json`
+- `Shared Credentials/api-keys/ai-hub/codex-caab-aidemodb.local.json` — AIDEMODB app `101` / AI Hub project `caab`
+- `Shared Credentials/api-keys/ai-hub/codex-afma.local.json` — legacy ASHCROFT source only; never use or repoint it for AIDEMODB
