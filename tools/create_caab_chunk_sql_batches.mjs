@@ -4,11 +4,20 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { parseArgs } from 'node:util';
+import { fileURLToPath } from 'node:url';
+import { reserveTaskOutput } from './owned_task_output.mjs';
 
 const workspace = process.cwd();
-const inputPath = path.resolve(workspace, process.argv[2] || '.local/caab_species_20260611.csv');
-const outputDir = path.resolve(workspace, process.argv[3] || '.local/caab_chunk_batches');
-const batchKey = (process.argv[4] || 'CAAB_20260611').toUpperCase();
+const { values, positionals } = parseArgs({
+  options: { manifest: { type: 'string' }, owner: { type: 'string' } },
+  allowPositionals: true
+});
+if (positionals.length < 2 || positionals.length > 3 || !values.manifest || !values.owner) {
+  throw new Error('Usage: node tools/create_caab_chunk_sql_batches.mjs <input.csv> <new-absolute-output-dir> [batch-key] --manifest <absolute-task-manifest> --owner <owner-session-id>');
+}
+const inputPath = path.resolve(workspace, positionals[0]);
+const batchKey = (positionals[2] || 'CAAB_20260611').toUpperCase();
 const fileName = path.basename(inputPath);
 const sourceUrl = 'https://www.cmar.csiro.au/data/caab/create_caab_extract.cfm';
 const chunkSize = 12000;
@@ -16,11 +25,6 @@ const chunksPerScript = 25;
 
 function sqlString(value) {
   return String(value ?? '').replace(/'/g, "''");
-}
-
-function writeFile(filePath, contents) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, contents, 'utf8');
 }
 
 if (!fs.existsSync(inputPath)) {
@@ -33,10 +37,13 @@ if (chunkSize % 4 !== 0) {
   process.exit(1);
 }
 
-fs.rmSync(outputDir, { recursive: true, force: true });
-fs.mkdirSync(outputDir, { recursive: true });
-
 const csv = fs.readFileSync(inputPath);
+const { outputDir, writeFile } = reserveTaskOutput({
+  outputDir: positionals[1],
+  manifestPath: values.manifest,
+  ownerSessionId: values.owner,
+  projectPath: path.dirname(path.dirname(fileURLToPath(import.meta.url)))
+});
 const sha256 = crypto.createHash('sha256').update(csv).digest('hex');
 const base64 = csv.toString('base64');
 const chunks = [];
