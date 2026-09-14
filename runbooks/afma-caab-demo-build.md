@@ -17,14 +17,14 @@ Live target:
 2. Save the workbook as `Data/caab_species_YYYYMMDD.xls`.
 3. Convert the Excel 97 workbook to CSV:
 
-```powershell
-.\tools\export_caab_workbook.ps1 -SourcePath Data\caab_species_20260611.xls -CsvPath .local\caab_species_20260611.csv
+```bash
+./tools/export_caab_workbook.sh Data/caab_species_20260611.xls .local/caab_species_20260611.csv
 ```
 
 4. Profile the converted CSV:
 
-```powershell
-& "C:\Users\pashcrof\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" tools\profile_caab_csv.py
+```bash
+"$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3" tools/profile_caab_csv.py
 ```
 
 ## Database Install
@@ -48,8 +48,8 @@ Repeatable large-load path:
 
 1. Generate base64 chunk SQL files from the CSV:
 
-```powershell
-node tools\create_caab_chunk_sql_batches.mjs .local\caab_species_20260611.csv .local\caab_chunk_batches
+```bash
+"$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node" tools/create_caab_chunk_sql_batches.mjs .local/caab_species_20260611.csv .local/caab_chunk_batches
 ```
 
 2. In APEX SQL Commands, run every generated `.local/caab_chunk_batches/caab_chunk_*.sql` file in order.
