@@ -1,5 +1,17 @@
 ﻿.codex/
 .local/
+.codex-protocol/
+tmp_*
+.env
+.env.*
+.auth/
+secrets/
+*.pem
+*.key
+*.crt
+wallet/
+Shared Credentials/
+Recordings/
 .tmp*/
 .oci/
 *.log
@@ -12,3 +24,5 @@ Data/*.xlsx
 Data/*.csv
 exports/apex/**/workspace-components/credentials/
 exports/apex/**/workspace-components/generative-ai-services/
+exports/**/workspace-components/credentials/
+exports/**/workspace-components/generative-ai-services/
