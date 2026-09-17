@@ -21,8 +21,34 @@ select object_type, count(*) as valid_object_count
 
 select config_key, config_value, notes
   from csiro_caab_config
- where config_key in ('AI_HUB_PROJECT_KANBAN_URL', 'AI_HUB_PUBLIC_BOARD_URL', 'AI_HUB_FEEDBACK_ENDPOINT_URL', 'AI_HUB_FEEDBACK_CREDENTIAL_STATIC_ID')
+ where config_key in ('AI_HUB_PROJECT_KEY', 'AI_HUB_PROJECT_KANBAN_URL', 'AI_HUB_PUBLIC_BOARD_URL', 'AI_HUB_FEEDBACK_ENDPOINT_URL', 'AI_HUB_FEEDBACK_CREDENTIAL_STATIC_ID')
  order by config_key
+/
+
+prompt Configuration checks do not certify credential contents, grants, reachability, or acknowledgement.
+
+select case when max(case when config_key = 'AI_HUB_PROJECT_KEY' then config_value end) = 'caab'
+            then 'PASS' else 'FAIL' end as caab_project_config,
+       case when max(case when config_key = 'AI_HUB_FEEDBACK_ENDPOINT_URL' then config_value end) =
+         'https://ge1c42bf10ae843-aidemodb.adb.ap-sydney-1.oraclecloudapps.com/ords/aihub/ai-hub-api/v1/projects/caab/feedback'
+            then 'PASS' else 'FAIL' end as aidemodb_endpoint_config,
+       case when trim(max(case when config_key = 'AI_HUB_FEEDBACK_CREDENTIAL_STATIC_ID' then config_value end)) is not null
+            then 'CONFIGURED; VERIFY SERVICE CLIENT' else 'MISSING' end as credential_reference
+  from csiro_caab_config
+ where config_key in ('AI_HUB_PROJECT_KEY', 'AI_HUB_FEEDBACK_ENDPOINT_URL', 'AI_HUB_FEEDBACK_CREDENTIAL_STATIC_ID')
+/
+
+select name, type, line, position, text
+  from all_errors
+ where owner = 'AFMA'
+   and name in ('AI_HUB_FEEDBACK_CANDIDATES_V', 'AFMA_AI_HUB_FORWARDER')
+ order by name, type, sequence
+/
+
+select count(*) as terminal_rows_without_acknowledgement_key
+  from ai_hub_feedback_forwards
+ where forward_status in ('FORWARDED', 'RESPONSE_ONLY')
+   and coalesce(ai_hub_task_key, ai_hub_feedback_key) is null
 /
 
 select count(*) as pending_feedback_count
@@ -36,5 +62,8 @@ select feedback_id, ai_hub_task_key, ai_hub_feedback_key, forward_status, decisi
  order by updated_at desc
  fetch first 10 rows only
 /
+
+prompt Live acceptance is separate: one approved feedback POST, identical replay, response read/ACK, then reread acknowledgement and ledger.
+prompt Verify caab project/source identity, identical keys on replay, no duplicate feedback/task, and no ASHCROFT request. Keep scheduling unactivated.
 
 prompt AFMA 086 complete

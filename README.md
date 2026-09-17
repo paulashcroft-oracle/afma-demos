@@ -26,6 +26,7 @@ This repository holds the replayable source assets for the first AFMA APEX demo 
 - Data profile: [`docs/caab-data-profile.md`](docs/caab-data-profile.md)
 - Fish-name research trail: [`docs/australian-fish-common-name-research.md`](docs/australian-fish-common-name-research.md)
 - Build runbook: [`runbooks/afma-caab-demo-build.md`](runbooks/afma-caab-demo-build.md)
+- September reliability work: [delivery procedure](runbooks/caab-reliability-delivery.md) and [verification status](docs/verification/2026-09-17-caab-reliability.md). Candidate source is not yet deployed; the status record distinguishes source checks from live acceptance.
 - Database scripts: [`database/`](database/)
 - Local data helpers: [`tools/`](tools/)
 - APEXlang Standard Export: [`exports/apex/afma/101/20260715-apexlang-standard-export/`](exports/apex/afma/101/20260715-apexlang-standard-export/)
@@ -43,5 +44,5 @@ Live AIDEMODB target:
 - Pages: Home, CSIRO CAAB Agent, Reports, Login
 - Loaded CAAB rows: `63,191`
 - Common names and regional aliases: `10,376`
-- Workspace AI services available to the Agent page: `9`
+- Historical Agent-page service count: `9`; current availability and retirement handling are being reconciled in the September reliability work.
 - Feedback capture: native APEX Feedback bubble/modal verified for `DEMO_USER`; AI Hub forwarding objects installed and controlled/dormant pending the live source-feedback API key and endpoint reachability check

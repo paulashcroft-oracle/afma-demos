@@ -69,7 +69,7 @@ comment on column ai_hub_feedback_forwards.feedback_id is
   'APEX_TEAM_FEEDBACK.FEEDBACK_ID from AFMA application 101.';
 /
 comment on column ai_hub_feedback_forwards.ai_hub_task_key is
-  'AI Hub task key returned for actionable feedback, for example afma-010.';
+  'AI Hub task key returned for actionable feedback, for example caab-010.';
 /
 comment on column ai_hub_feedback_forwards.ai_hub_feedback_key is
   'AI Hub source-feedback key returned for response-only or task-backed feedback.';
@@ -102,16 +102,25 @@ select f.feedback_id,
            from ai_hub_feedback_forwards x
           where x.feedback_id = f.feedback_id
             and x.forward_status in ('FORWARDED', 'RESPONSE_ONLY')
+            and coalesce(x.ai_hub_task_key, x.ai_hub_feedback_key) is not null
        );
 /
 
 create or replace package afma_ai_hub_forwarder authid definer as
-  c_project_key constant varchar2(30) := 'afma';
-  c_credential_static_id constant varchar2(128) := 'AI_HUB_AFMA_FEEDBACK_API';
+  c_project_key constant varchar2(30) := 'caab';
+  -- Compatibility constant only; there is no default credential after migration.
+  c_credential_static_id constant varchar2(128) := null;
   c_default_feedback_url constant varchar2(1000) :=
-    'https://apex.oraclecorp.com/pls/apex/ashcroft/ai-hub-api/v1/projects/afma/feedback';
+    'https://ge1c42bf10ae843-aidemodb.adb.ap-sydney-1.oraclecloudapps.com/ords/aihub/ai-hub-api/v1/projects/caab/feedback';
 
+  function project_key return varchar2;
   function feedback_url return varchar2;
+
+  -- Pure contract check: no network request, credential access or ledger write.
+  function acknowledgement_is_valid(
+    p_response_json in clob,
+    p_expected_idempotency in varchar2
+  ) return boolean;
 
   function idempotency_key(
     p_feedback_id in number
@@ -142,6 +151,41 @@ end afma_ai_hub_forwarder;
 /
 
 create or replace package body afma_ai_hub_forwarder as
+  function acknowledgement_is_valid(
+    p_response_json in clob,
+    p_expected_idempotency in varchar2
+  ) return boolean is
+    l_task_key varchar2(128);
+    l_feedback_key varchar2(128);
+    l_public_response varchar2(4000);
+    l_status varchar2(30);
+    l_project varchar2(30);
+    l_idempotency varchar2(255);
+    l_task_action varchar2(80);
+  begin
+    select json_value(p_response_json, '$.taskKey' returning varchar2(128) null on error),
+           json_value(p_response_json, '$.feedbackKey' returning varchar2(128) null on error),
+           json_value(p_response_json, '$.publicResponse' returning varchar2(4000) null on error),
+           json_value(p_response_json, '$.status' returning varchar2(30) null on error),
+           json_value(p_response_json, '$.projectKey' returning varchar2(30) null on error),
+           json_value(p_response_json, '$.idempotencyKey' returning varchar2(255) null on error),
+           json_value(p_response_json, '$.taskAction' returning varchar2(80) null on error)
+      into l_task_key, l_feedback_key, l_public_response, l_status,
+           l_project, l_idempotency, l_task_action
+      from dual;
+    if trim(p_expected_idempotency) is null
+       or nvl(l_status, '?') <> 'accepted'
+       or nvl(l_project, '?') <> c_project_key
+       or nvl(l_idempotency, '?') <> p_expected_idempotency
+       or (trim(l_task_key) is null and trim(l_feedback_key) is null)
+       or (l_task_key is not null and not regexp_like(l_task_key, '^' || c_project_key || '-[0-9]+$'))
+       or (l_feedback_key is not null and not regexp_like(l_feedback_key, '^[1-9][0-9]*$'))
+       or (l_task_key is null and (nvl(l_task_action, '?') <> 'NONE' or trim(l_public_response) is null)) then
+      return false;
+    end if;
+    return true;
+  end acknowledgement_is_valid;
+
   function config_value(
     p_key     in varchar2,
     p_default in varchar2
@@ -159,17 +203,29 @@ create or replace package body afma_ai_hub_forwarder as
       return p_default;
   end config_value;
 
-  function feedback_url return varchar2 is
+  function project_key return varchar2 is
+    l_project_key varchar2(30) := lower(trim(config_value('AI_HUB_PROJECT_KEY', null)));
   begin
-    return config_value('AI_HUB_FEEDBACK_ENDPOINT_URL', c_default_feedback_url);
+    if l_project_key is null or l_project_key <> c_project_key then
+      raise_application_error(-20003, 'AFMA app 101 requires the configured AI Hub project caab.');
+    end if;
+    return l_project_key;
+  end project_key;
+
+  function feedback_url return varchar2 is
+    l_url varchar2(1000) := trim(config_value('AI_HUB_FEEDBACK_ENDPOINT_URL', null));
+    l_project_key varchar2(30) := project_key;
+  begin
+    -- Fail closed while a historical endpoint remains configured. Never send its key.
+    if l_url is null or l_url <> c_default_feedback_url then
+      raise_application_error(-20004, 'Configure the verified AIDEMODB caab feedback endpoint before forwarding.');
+    end if;
+    return l_url;
   end feedback_url;
 
   procedure ensure_workspace is
   begin
     apex_util.set_workspace('AFMA');
-  exception
-    when others then
-      null;
   end ensure_workspace;
 
   function normalized_text(
@@ -196,6 +252,7 @@ create or replace package body afma_ai_hub_forwarder as
     p_feedback_id in number
   ) return varchar2 is
   begin
+    -- Preserve the source identity across the project/endpoint migration and retries.
     return 'afma-apex-feedback-' || to_char(p_feedback_id);
   end idempotency_key;
 
@@ -291,8 +348,7 @@ create or replace package body afma_ai_hub_forwarder as
     apex_json.write('submittedAt', to_char(l_created_on, 'YYYY-MM-DD"T"HH24:MI:SS TZH:TZM'));
     apex_json.close_object;
     apex_json.close_object;
-    l_payload := apex_json.get_clob_output;
-    apex_json.free_output;
+    l_payload := apex_json.get_clob_output(p_free => true);
 
     return l_payload;
   exception
@@ -435,7 +491,12 @@ create or replace package body afma_ai_hub_forwarder as
     ) source
     on (target.feedback_id = source.feedback_id)
     when matched then update set
-      target.forward_status = 'FAILED',
+      target.forward_status = case
+        when target.forward_status in ('FORWARDED', 'RESPONSE_ONLY')
+         and coalesce(target.ai_hub_task_key, target.ai_hub_feedback_key) is not null
+        then target.forward_status
+        else 'FAILED'
+      end,
       target.error_message = substr(p_error_message, 1, 4000),
       target.source_application_id = source.application_id,
       target.source_page_id = source.page_id,
@@ -473,6 +534,8 @@ create or replace package body afma_ai_hub_forwarder as
     l_feedback_key varchar2(128);
     l_decision_code varchar2(80);
     l_public_response varchar2(4000);
+    l_url varchar2(1000);
+    l_credential_static_id varchar2(128);
     l_forward_status varchar2(30);
     l_force_yn varchar2(1) := upper(nvl(substr(trim(p_force_yn), 1, 1), 'N'));
   begin
@@ -493,6 +556,11 @@ create or replace package body afma_ai_hub_forwarder as
     end;
 
     ensure_workspace;
+    l_url := feedback_url;
+    l_credential_static_id := trim(config_value('AI_HUB_FEEDBACK_CREDENTIAL_STATIC_ID', null));
+    if l_credential_static_id is null then
+      raise_application_error(-20005, 'Configure a verified project-scoped AIDEMODB feedback Web Credential before forwarding.');
+    end if;
     l_payload := build_endpoint_payload(p_feedback_id);
 
     apex_web_service.g_request_headers.delete;
@@ -502,22 +570,21 @@ create or replace package body afma_ai_hub_forwarder as
     apex_web_service.g_request_headers(2).value := idempotency_key(p_feedback_id);
 
     l_response := apex_web_service.make_rest_request(
-      p_url                  => feedback_url,
+      p_url                  => l_url,
       p_http_method          => 'POST',
       p_body                 => l_payload,
       p_transfer_timeout     => 30,
-      p_credential_static_id => c_credential_static_id
+      p_credential_static_id => l_credential_static_id
     );
 
     l_status_code := apex_web_service.g_status_code;
 
-    if l_status_code not in (200, 201) then
-      mark_failed(
-        p_feedback_id   => p_feedback_id,
-        p_error_message => 'AI Hub returned HTTP ' || l_status_code || ': ' || dbms_lob.substr(l_response, 2000, 1)
-      );
-      commit;
+    if l_status_code is null or l_status_code not in (200, 201) then
       raise_application_error(-20002, 'AI Hub returned HTTP ' || l_status_code || '.');
+    end if;
+
+    if not acknowledgement_is_valid(l_response, idempotency_key(p_feedback_id)) then
+      raise_application_error(-20006, 'AI Hub returned an invalid feedback acknowledgement; the source record remains retryable.');
     end if;
 
     select json_value(l_response, '$.taskKey' returning varchar2(128) null on error),
@@ -576,8 +643,14 @@ create or replace package body afma_ai_hub_forwarder as
         )
        where rownum <= greatest(1, nvl(p_limit, 10))
     ) loop
-      l_result_key := forward_feedback(r.feedback_id);
-      l_count := l_count + case when l_result_key is not null then 1 else 0 end;
+      begin
+        l_result_key := forward_feedback(r.feedback_id);
+        l_count := l_count + case when l_result_key is not null then 1 else 0 end;
+      exception
+        when others then
+          -- forward_feedback records the item's error. Continue the bounded batch.
+          null;
+      end;
     end loop;
 
     return l_count;
@@ -585,32 +658,36 @@ create or replace package body afma_ai_hub_forwarder as
 end afma_ai_hub_forwarder;
 /
 
+-- Fresh-install defaults only. Existing configuration is migrated explicitly after
+-- service-client/credential verification; replay must never overwrite live routing.
 merge into csiro_caab_config target
 using (
-  select 'AI_HUB_PROJECT_KANBAN_URL' as config_key,
-         'https://apex.oraclecorp.com/pls/apex/r/ashcroft/ai-hub/project-kanban?request=PROJECT-afma' as config_value,
+  select 'AI_HUB_PROJECT_KEY' as config_key,
+         'caab' as config_value,
+         'AI Hub application project boundary for AFMA app 101.' as notes
+    from dual
+  union all
+  select 'AI_HUB_PROJECT_KANBAN_URL',
+         'https://ge1c42bf10ae843-aidemodb.adb.ap-sydney-1.oraclecloudapps.com/ords/r/aihub/ai-hub/project-kanban?request=PROJECT-caab',
          'Stable AI Hub project-filtered Kanban landing URL. Do not store session URLs.' as notes
     from dual
   union all
   select 'AI_HUB_PUBLIC_BOARD_URL',
-         'https://apex.oraclecorp.com/pls/apex/ashcroft/ai-hub-api/v1/projects/afma/board',
-         'Public compact AI Hub board endpoint for AFMA.'
+         'https://ge1c42bf10ae843-aidemodb.adb.ap-sydney-1.oraclecloudapps.com/ords/aihub/ai-hub-api/v1/projects/caab/board',
+         'Public compact AI Hub board endpoint for CAAB.'
     from dual
   union all
   select 'AI_HUB_FEEDBACK_ENDPOINT_URL',
-         'https://apex.oraclecorp.com/pls/apex/ashcroft/ai-hub-api/v1/projects/afma/feedback',
-         'Project-scoped AI Hub source feedback endpoint. Retarget when AI Hub is database-reachable from AIDEMODB.'
+         'https://ge1c42bf10ae843-aidemodb.adb.ap-sydney-1.oraclecloudapps.com/ords/aihub/ai-hub-api/v1/projects/caab/feedback',
+         'AIDEMODB CAAB source feedback endpoint. Verify the dedicated service credential and server-side reachability before use.'
     from dual
   union all
   select 'AI_HUB_FEEDBACK_CREDENTIAL_STATIC_ID',
-         'AI_HUB_AFMA_FEEDBACK_API',
-         'APEX Web Credential static id for the AFMA source feedback API key. Raw key is stored only in the live credential.'
+         cast(null as varchar2(4000)),
+         'Set only after provisioning and verifying the dedicated AIDEMODB caab service Web Credential. Never use a Codex or ASHCROFT key.'
     from dual
 ) source
 on (target.config_key = source.config_key)
-when matched then update set
-  target.config_value = source.config_value,
-  target.notes = source.notes
 when not matched then
   insert (config_key, config_value, notes)
   values (source.config_key, source.config_value, source.notes);

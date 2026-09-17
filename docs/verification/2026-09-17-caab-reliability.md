@@ -22,7 +22,7 @@ Configured remote: `https://github.com/paulashcroft-oracle/afma-demos.git`. A no
 
 ## Guidance
 
-Manifest revision `2026-09-17.2`; topics: credentials, apex-source-control, ai-hub-workflow, aidemodb-bootstrap, apex-browser, github-delivery, artifact-hygiene. All required files were fully reread after context compaction; no reads were reused from the compacted summary.
+Manifest revision `2026-09-17.3`; topics: credentials, apex-source-control, ai-hub-workflow, aidemodb-bootstrap, apex-browser, github-delivery, artifact-hygiene. All required files were fully reread after context compaction; no reads were reused from the compacted summary.
 
 Fully read paths:
 
@@ -58,16 +58,34 @@ Current shared guidance supersedes older skill wording about abandoning worktree
 
 Maximum: 40 application/provider requests across this implementation and verification. Used: **0**. Connection tests must be counted if they invoke a model. Token usage remains unknown unless the provider returns it; context characters are not billed tokens.
 
+## Read-only candidate verification
+
+SQLcl CLI 26.2.0.0, saved connection `aidemodb`, verified session `CODEX` / `GE1C42BF10AE843_AIDEMODB`, executed the candidate 030 declarations as an anonymous block with AFMA table references qualified for this existing account. No package was created or replaced. A deliberately absent service prevented provider calls. The canonical tests are `database/apex-workspace/tests/caab_reliability_readonly.sql`; the temporary qualified wrapper is registered in the owned lifecycle run.
+
+The final expanded suite passed **121 retrieval assertions**, including exact/absent codes, scientific name, superseded code and flag, synthetic alias provenance, ambiguous names and alias caveats, exact raw habitat/rank/order filters and intersections, unsupported filter syntax, catalogue counts versus SQL, grouped class chart, qualified-count rejection, tuna/NSW exclusion, useful terms after a polite prefix, mixed-status clarification, context bounds/status, abundance limitation, independent follow-up clarification, unknown-model fallback, safe error output and prompt length. **8 native Markdown checks** passed for escaped HTML, omitted images, unsafe/unapproved schemes, retained HTTPS, safe link attributes, pipe tables and Mermaid code fences. **16 pure feedback acknowledgement checks** passed for valid task/response-only contracts and rejected missing/mismatched/invalid identities, statuses and content. No model, feedback, or other external business request was made. Candidate 040 declarations also compiled; its rendering/asset delivery was not exercised.
+
+Final run's server-reported total timings (10 ms resolution): exact codes 30–140 ms; code excluded by a typed filter 30 ms; scientific name 1,130 ms; local aliases 820 ms; raw habitat filters 60–310 ms; species rank 380 ms; order 110 ms; intersected filters 70 ms; catalogue counts 40 ms; class chart 50 ms; tuna/NSW 110 ms; polite scientific-name query 1,030 ms; broad shark explanation with unavailable-service fallback 1,100 ms. These are candidate anonymous-routine database timings, not deployed browser/AI latency, a benchmark distribution or provider tokens.
+
+Corrections found before deployment: five unsupported JSON array object calls changed to `TREAT(array.get(index) AS JSON_OBJECT_T)`; chart intent grammar restored; missing typed filters/alias caveats restored; the synthetic-provenance test now decodes JSON before checking HTML so JSON slash escaping cannot create a false failure. Native APEX escapes HTTPS slashes as `&#x2F;`, so the server link guard explicitly accepts native escaped slashes while rejecting encoded/unsafe schemes. Earlier `WITH FUNCTION` output-wrapper experimentation failed to parse and changed no database object. SQLcl MCP omitted DBMS_OUTPUT, so the final recorded test used the installed CLI. A transient CURRENT_SCHEMA test was restored to CODEX after the MCP audit logger reported insufficient privileges under AFMA; no audit or access grant was changed.
+
+Final peer review corrected two contract edges: a code excluded by typed filters now reports the combined mismatch, and feedback identity validation accepts only the positive decimal IDs emitted by the AI Hub contract. Boolean, nonnumeric and zero-ID fixtures reject them. A local JavaScript replacement-token mistake temporarily corrupted the validator wrapper; the exact duplicated suffix was removed, source/wrapper identity checked, and the complete final read-only suite rerun successfully. This did not deploy any object.
+
+JavaScript syntax and focused offline DOM-adapter checks passed for the pinned Mermaid 11.17.2 enhancement, source limits, forbidden features/resources and readable fallback/cleanup. It relies on Mermaid's maintained strict-mode sanitizer and a compact inert-DOM resource guard. Actual Mermaid layout, browser keyboard/mobile behavior and app static-file delivery remain unverified under the browser hold.
+
+A separate attempt to compile the complete 085 body as uncalled anonymous declarations under CODEX failed with `ORA-01031` at its four AFMA ledger DML statements. No DML was executed. The pure acknowledgement function passed independently, but this is not a full-package compile pass. Complete compilation and ledger behavior require the authorized AFMA parsing-schema SQL Workshop context; no account switch, grant expansion or permission bypass was performed.
+
+Documentation checkpoint `5bc4c99d555949e1c160f7b803dc09d1552cab7f` is pushed and verified at `origin/codex/caab-reliability`; Task Thread entry 1876 records it. The next checkpoint contains undeployed source candidates; live baseline/post-change exports remain pending. Coordinator operation `approval-completion-20260917/v2` reinforces Paul's existing R01–R10 completion authority; it does not record human acceptance. Browser queue v12 places CAAB after GovernMate, GEO and AI Hub's bounded administration inspection. All browser interaction remains held until explicit release.
+
 ## Recommendation coverage and acceptance
 
 | Recommendation | Implementation and required proof |
 |---|---|
 | R01 | Reconcile current services/bindings, exclude retired choices in the app, verify every offered model. Pending live reconciliation. |
-| R02 | Exact code/name retrieval, separate regional qualification, useful token limit after stop words, provenance/status and sample counts. Candidate source in progress. |
-| R03 | Conservative deterministic code/count/abundance routes, zero model attempt on those routes. Candidate source in progress. |
-| R04 | One bounded evidence result reused for prompt and supporting output. No shared answer/conversation cache. Candidate source in progress. |
+| R02 | Exact code/name retrieval, separate regional qualification, useful token limit after stop words, provenance/status and sample counts. Candidate read-only assertions passed; installed-package verification pending. |
+| R03 | Conservative deterministic code/count/abundance routes, zero model attempt on those routes. Candidate read-only assertions passed; runtime verification pending. |
+| R04 | One bounded evidence result reused for prompt and supporting output. No shared answer/conversation cache. Candidate bounds/status assertions passed; live AI alignment pending. |
 | R05 | Bounded context and measured candidate-model comparison without unverified output-token settings. Tests pending. |
-| R06 | Honest result mode/resolved model/safe fallback/reference and stage timings; no automatic retries. Candidate source in progress. |
+| R06 | Honest result mode/resolved model/safe fallback/reference and stage timings; no automatic retries. Candidate unavailable-service and timing assertions passed; live AI/runtime checks pending. |
 | R07 | Independent-question semantics explicitly described; no new conversation state. Candidate wording prepared. |
 | R08 | Native APEX Markdown, maintained static assets, prompt label/status and safe response insertion. Candidate prepared; rendering/keyboard/mobile checks pending. |
 | R09 | Scoped AIDEMODB `caab` bridge, validated acknowledgement, idempotency and per-item failures. Candidate prepared; distinct source-app service credential and live baseline pending. |
