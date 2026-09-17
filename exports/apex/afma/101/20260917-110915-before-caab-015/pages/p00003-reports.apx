@@ -1,0 +1,795 @@
+page 3 (
+    name: Reports
+    alias: REPORTS
+    title: CAAB Reports
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region curated-aliases-by-jurisdiction (
+        name: Curated Aliases by Jurisdiction
+        type: chart
+        layout {
+            sequence: 60
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: afma-caab-alias-jurisdiction-chart
+        }
+        security {
+            escapeSpecialChars: false
+        }
+        chartLayout {
+            height: 300
+        }
+        dataCursor {
+            cursor: true
+        }
+
+        series aliases (
+            name: Aliases
+            execution {
+                sequence: 10
+            }
+            source {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    select jurisdiction,
+                           alias_count
+                      from csiro_caab_report_alias_jurisdictions
+                    ```
+            }
+            columnMapping {
+                label: JURISDICTION
+                value: ALIAS_COUNT
+            }
+            appearance {
+                color: #007f7a
+            }
+            label {
+                show: true
+            }
+            advanced {
+                javaScriptStaticId: alias-count
+            }
+        )
+
+        series species (
+            name: Species
+            execution {
+                sequence: 20
+            }
+            source {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    select jurisdiction,
+                           species_count
+                      from csiro_caab_report_alias_jurisdictions
+                    ```
+            }
+            columnMapping {
+                label: JURISDICTION
+                value: SPECIES_COUNT
+            }
+            appearance {
+                color: #5c9f38
+            }
+            label {
+                show: true
+            }
+            advanced {
+                javaScriptStaticId: alias-species
+            }
+        )
+
+        axis x (
+            name: x
+            majorTicks {
+                show: auto
+            }
+        )
+
+        axis y (
+            name: y
+            title: Rows
+            value {
+                min: 0
+            }
+            majorTicks {
+                show: auto
+            }
+        )
+
+    )
+
+    region curated-regional-alias-detail (
+        name: Curated Regional Alias Detail
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select common_name,
+                       scientific_name,
+                       caab_common_name,
+                       replace(initcap(name_kind), '_', ' ') name_kind,
+                       jurisdiction,
+                       region_name,
+                       locality,
+                       first_observed_year,
+                       last_observed_year,
+                       source_confidence,
+                       synthetic_flag
+                  from csiro_caab_report_curated_aliases
+                 order by scientific_name, common_name
+                ```
+        }
+        layout {
+            sequence: 70
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: afma-caab-curated-aliases
+        }
+        reportLayout {
+            numberOfRows: 50
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+            showNullValuesAs: -
+        }
+        pagination {
+            type: rowRangesXToYNoPagination
+            partialPageRefresh: false
+        }
+        download {
+            csvExportEnabled: true
+        }
+
+        column CAAB_COMMON_NAME (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: CAAB Name
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column COMMON_NAME (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Common Name
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column FIRST_OBSERVED_YEAR (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: First Seen
+            }
+            layout {
+                sequence: 80
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column JURISDICTION (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Jurisdiction
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LAST_OBSERVED_YEAR (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: Last Seen
+            }
+            layout {
+                sequence: 90
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LOCALITY (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Locality
+            }
+            layout {
+                sequence: 70
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column NAME_KIND (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Kind
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column REGION_NAME (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Region
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column SCIENTIFIC_NAME (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Scientific Name
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column SOURCE_CONFIDENCE (
+            reportColumnQueryId: 10
+            derivedColumn: N
+            heading {
+                heading: Source
+            }
+            layout {
+                sequence: 100
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column SYNTHETIC_FLAG (
+            reportColumnQueryId: 11
+            derivedColumn: N
+            heading {
+                heading: Demo
+            }
+            layout {
+                sequence: 110
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region current-status-mix (
+        name: Current Status Mix
+        type: chart
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: afma-caab-status-chart
+        }
+        security {
+            escapeSpecialChars: false
+        }
+        chart {
+            type: pie
+        }
+        chartLayout {
+            height: 300
+        }
+        dataCursor {
+            cursor: true
+        }
+
+        series status (
+            name: Status
+            execution {
+                sequence: 10
+            }
+            source {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    select status_label,
+                           taxon_count
+                      from csiro_caab_report_status_mix
+                    ```
+            }
+            columnMapping {
+                label: STATUS_LABEL
+                value: TAXON_COUNT
+            }
+            label {
+                show: true
+                displayAs: percentage
+            }
+            advanced {
+                javaScriptStaticId: status-mix
+            }
+        )
+
+    )
+
+    region habitat-code-mix (
+        name: Habitat Code Mix
+        type: chart
+        layout {
+            sequence: 50
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: afma-caab-habitat-chart
+        }
+        security {
+            escapeSpecialChars: false
+        }
+        chartAppearance {
+            orientation: horizontal
+        }
+        chartLayout {
+            height: 300
+        }
+        dataCursor {
+            cursor: true
+        }
+        legend {
+            show: false
+        }
+
+        series rows (
+            name: Rows
+            execution {
+                sequence: 10
+            }
+            source {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    select habitat_code,
+                           taxon_count
+                      from csiro_caab_report_habitat_mix
+                     fetch first 10 rows only
+                    ```
+            }
+            columnMapping {
+                label: HABITAT_CODE
+                value: TAXON_COUNT
+            }
+            appearance {
+                color: #00a6c8
+            }
+            label {
+                show: true
+            }
+            advanced {
+                javaScriptStaticId: habitat-mix
+            }
+        )
+
+        axis x (
+            name: x
+            title: Rows
+            value {
+                min: 0
+            }
+            majorTicks {
+                show: auto
+            }
+        )
+
+        axis y (
+            name: y
+            majorTicks {
+                show: auto
+            }
+        )
+
+    )
+
+    region largest-fish-classes (
+        name: Largest Fish Classes
+        type: chart
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: afma-caab-fish-classes-chart
+        }
+        security {
+            escapeSpecialChars: false
+        }
+        chartAppearance {
+            orientation: horizontal
+        }
+        chartLayout {
+            height: 320
+        }
+        dataCursor {
+            cursor: true
+        }
+
+        series species (
+            name: Species
+            execution {
+                sequence: 20
+            }
+            source {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    select class_name,
+                           species_count
+                      from csiro_caab_report_fish_classes
+                     fetch first 10 rows only
+                    ```
+            }
+            columnMapping {
+                label: CLASS_NAME
+                value: SPECIES_COUNT
+            }
+            appearance {
+                color: #5c9f38
+            }
+            label {
+                show: true
+            }
+            advanced {
+                javaScriptStaticId: fish-species
+            }
+        )
+
+        series taxa (
+            name: Taxa
+            execution {
+                sequence: 10
+            }
+            source {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    select class_name,
+                           taxon_count
+                      from csiro_caab_report_fish_classes
+                     fetch first 10 rows only
+                    ```
+            }
+            columnMapping {
+                label: CLASS_NAME
+                value: TAXON_COUNT
+            }
+            appearance {
+                color: #007f7a
+            }
+            label {
+                show: true
+            }
+            advanced {
+                javaScriptStaticId: fish-taxa
+            }
+        )
+
+        axis x (
+            name: x
+            title: Rows
+            value {
+                min: 0
+            }
+            majorTicks {
+                show: auto
+            }
+        )
+
+        axis y (
+            name: y
+            majorTicks {
+                show: auto
+            }
+        )
+
+    )
+
+    region reports-layout-styles (
+        name: Reports Layout Styles
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                
+                <style>
+                div.t-Region[aria-label="Reports Layout Styles"]{display:none!important;}
+                div.t-Region[aria-label="Summary"] .t-Report-wrap,
+                div.t-Region[aria-label="Summary"] .t-Report-tableWrap{width:100%;}
+                div.t-Region[aria-label="Summary"] .t-Report-report{display:block;width:100%;}
+                div.t-Region[aria-label="Summary"] .t-Report-report thead{display:none;}
+                div.t-Region[aria-label="Summary"] .t-Report-report tbody{display:grid;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));gap:.75rem;}
+                div.t-Region[aria-label="Summary"] .t-Report-report tr{display:flex;flex-direction:column;justify-content:space-between;border:1px solid var(--ut-component-border-color,#d5d9de);border-radius:.5rem;background:var(--ut-component-background-color,#fff);padding:.75rem;min-height:7.5rem;}
+                div.t-Region[aria-label="Summary"] .t-Report-report td{display:block;}
+                div.t-Region[aria-label="Summary"] .t-Report-cell{border:0!important;padding:0!important;background:transparent!important;}
+                div.t-Region[aria-label="Summary"] .t-Report-cell[headers="METRIC_NAME"]{color:var(--ut-component-text-muted-color,#4b5563);font-size:.75rem;font-weight:800;text-transform:uppercase;}
+                div.t-Region[aria-label="Summary"] .t-Report-cell[headers="METRIC_VALUE"]{font-size:2rem;font-weight:850;line-height:1.1;margin-block:.35rem;color:#183a54;}
+                div.t-Region[aria-label="Summary"] .t-Report-cell[headers="METRIC_CONTEXT"]{color:var(--ut-component-text-muted-color,#4b5563);font-size:.8125rem;}
+                div.t-Region[aria-label="Summary"] .t-Report-pagination{display:none!important;}
+                </style>
+                
+                ```
+        }
+        layout {
+            sequence: 1
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: [
+                #DEFAULT#
+                t-Region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: afma-caab-reports-styles
+        }
+    )
+
+    region summary (
+        name: Summary
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select metric_name,
+                       metric_value,
+                       metric_context
+                  from csiro_caab_report_summary_metrics
+                 order by metric_sequence
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: afma-caab-report-summary
+        }
+        reportLayout {
+            numberOfRows: 20
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+            showNullValuesAs: -
+        }
+        pagination {
+            type: rowRangesXToYNoPagination
+            partialPageRefresh: false
+        }
+
+        column METRIC_CONTEXT (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Context
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column METRIC_NAME (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Metric
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column METRIC_VALUE (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Value
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region taxonomic-rank-mix (
+        name: Taxonomic Rank Mix
+        type: chart
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: afma-caab-rank-chart
+        }
+        security {
+            escapeSpecialChars: false
+        }
+        chartLayout {
+            height: 300
+        }
+        dataCursor {
+            cursor: true
+        }
+        legend {
+            show: false
+        }
+
+        series rows (
+            name: Rows
+            execution {
+                sequence: 10
+            }
+            source {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    select rank_name,
+                           taxon_count
+                      from csiro_caab_report_rank_mix
+                     fetch first 12 rows only
+                    ```
+            }
+            columnMapping {
+                label: RANK_NAME
+                value: TAXON_COUNT
+            }
+            appearance {
+                color: #183a54
+            }
+            label {
+                show: true
+            }
+            advanced {
+                javaScriptStaticId: rank-mix
+            }
+        )
+
+        axis x (
+            name: x
+            majorTicks {
+                show: auto
+            }
+        )
+
+        axis y (
+            name: y
+            title: Rows
+            value {
+                min: 0
+            }
+            majorTicks {
+                show: auto
+            }
+        )
+
+    )
+
+)
+
