@@ -10,7 +10,7 @@ Target: AIDEMODB, AFMA workspace/schema, application 101 (`AFMA CAAB AI Demo`, a
 
 **Implementation/deployment:** candidate source preparation; no application/package deployment yet.
 
-**Verification:** live SQL identity and AI Hub discovery passed. Current deployed package-body/app reconciliation and browser tests pending the coordinated Chrome window. SQLcl `apex list -applicationid 101` returned no visible components in the CODEX connection; this does not prove app absence. No access grant was changed.
+**Verification:** live SQL identity and AI Hub discovery passed. CODEX/AFMA Builder access, app identity, native agent inventory and package validity are now verified. Full deployed source reconciliation and runtime tests remain pending. SQLcl `apex list -applicationid 101` returned no visible components in the CODEX connection; this does not prove app absence. No access grant was changed.
 
 **Housekeeping:** task-owned lifecycle run initialized; export/test scratch is under the ignored run. No cleanup claimed. The saved checkout's modified `.gitignore` and untracked `_gitignore_for_mac_migration` remain untouched.
 
@@ -74,7 +74,7 @@ JavaScript syntax and focused offline DOM-adapter checks passed for the pinned M
 
 A separate attempt to compile the complete 085 body as uncalled anonymous declarations under CODEX failed with `ORA-01031` at its four AFMA ledger DML statements. No DML was executed. The pure acknowledgement function passed independently, but this is not a full-package compile pass. Complete compilation and ledger behavior require the authorized AFMA parsing-schema SQL Workshop context; no account switch, grant expansion or permission bypass was performed.
 
-Documentation checkpoint `5bc4c99d555949e1c160f7b803dc09d1552cab7f` is pushed and verified at `origin/codex/caab-reliability`; Task Thread entry 1876 records it. The next checkpoint contains undeployed source candidates; live baseline/post-change exports remain pending. Coordinator operation `approval-completion-20260917/v2` reinforces Paul's existing R01–R10 completion authority; it does not record human acceptance. Browser queue v12 places CAAB after GovernMate, GEO and AI Hub's bounded administration inspection. All browser interaction remains held until explicit release.
+Documentation checkpoint `5bc4c99d555949e1c160f7b803dc09d1552cab7f` is pushed and verified at `origin/codex/caab-reliability`; Task Thread entry 1876 records it. Undeployed candidate checkpoint `61f0c5f8d1aedfae86db501de97d946013b23981` is committed, pushed and remote-verified; Task Thread 1882 records its 145 passing checks. Live baseline/post-change exports remain pending. Coordinator operation `approval-completion-20260917/v2` reinforces Paul's existing R01–R10 completion authority; it does not record human acceptance. Browser queue v12 places CAAB after GovernMate, GEO and AI Hub's bounded administration inspection. All browser interaction remains held until explicit release.
 
 ## Recommendation coverage and acceptance
 
@@ -98,3 +98,19 @@ Acceptance must include code `37354001`, an absent code, a non-current/supersede
 Fresh full bundles `caab-009` and `caab-014` do not establish installed service-credential or acknowledgement readiness. Only the Codex `caab` automation profile was found among named CAAB profiles. The coordinator has been asked to resolve an existing distinct project-scoped source-app client/reference or own its named provisioning gate. Never use the Codex automation key in the application or repoint a legacy ASHCROFT secret.
 
 Expected minimal source-app scopes: `feedback.write`, `feedback.read`, `feedback.response.read`, `feedback.response.acknowledge`; no response-authoring or administrative scope. Canonical endpoint: `https://ge1c42bf10ae843-aidemodb.adb.ap-sydney-1.oraclecloudapps.com/ords/aihub/ai-hub-api/v1/projects/caab/feedback`.
+
+## Live read-only inspection and browser release
+
+During the coordinator's explicit v12 CAAB browser slice, native Chrome autofill signed CODEX into AFMA without exposing credential values. Live APEX reports version 26.1.4. App 101 is AFMA CAAB AI Demo, alias afma-caab-ai-demo, owner AFMA, seven pages. SQL Workshop's selected schema is AFMA. No app, package, grant or credential mutation occurred.
+
+The app has nine native AI Agents, all reporting zero tools and Text response format: the two retired Cohere aliases, Gemini 2.5 Pro/Flash/Flash-Lite, GPT OSS 120b/20b, Grok 4.20 reasoning and Grok 4.3. The inspected Pro agent has static ID google_gemini_2_5_pro, service google.gemini-2.5-pro, temperature .2, and no augmentation or on-demand tools. This is metadata evidence, not connection or model-quality verification.
+
+Read-only config results: AI_CONFIG_STATIC_ID=google_gemini_2_5_pro; AI_AGENT_STATIC_ID=CSIRO_CAAB_AGENT; AI_HUB_FEEDBACK_CREDENTIAL_STATIC_ID=AI_HUB_AFMA_FEEDBACK_API; the endpoint still points to historical ASHCROFT /projects/afma/feedback; no AI_HUB_PROJECT_KEY row was returned. The coordinator confirmed that the distinct AIDEMODB source-app SERVICE credential remains unissued/unverified; its proposed filename is not a usable credential reference.
+
+All three affected package specifications and bodies are VALID. Recorded body LAST_DDL values are 2026-07-13 04:35:01 for CSIRO_CAAB_AGENT_API and CSIRO_CAAB_PAGE_API, and 2026-07-13 04:35:02 for AFMA_AI_HUB_FORWARDER. Validity/timestamps do not establish source equality.
+
+One app 101 APEXlang Standard Export action emitted the supported download event, but the tool returned an opaque object without a file path. Page.setDownloadBehavior was unsupported and directed use of the download event. Opening Chrome's internal downloads URL was policy-rejected; that UI was not retried or bypassed. The coordinator supplied its previously verified native-download-to-filesystem handoff: narrow local artifact metadata inspection, exact identity verification, and exact-file relocation to owned scratch. No new file appeared in the normal user's Downloads by creation or write timestamp after the verified 10:05:29 UTC source-checkpoint note; host UTC agrees with the task clock. No archive was opened, moved, staged, registered or claimed as captured. No repeat export was attempted. The current baseline remains a concrete artifact-handoff dependency; deployment stopped before mutation.
+
+At about 10:15 UTC CAAB explicitly released ALL-browser ownership directly to Policing and copied the coordinator; subsequent queue is Policing, GovernMate, GEO continuation. CAAB root and children are HOLD. Own tab 61491459 is marked for continuation at SQL Commands showing the completed read-only validity result. There is no pending CUA, chooser, dialog, SQL write or unsaved component edit. The export location is unresolved, not an in-flight browser action. Preserve all existing tabs/profile.
+
+Next owners/actions: the coordinator resolves the baseline artifact handoff and distinct SERVICE-client provisioning dependency; CAAB retains remaining source reconciliation, surgical deployment, live tests, exports and PR in BUILD. No Test/Complete or human acceptance claim. Model usage remains 0/40. The owned artifact lease remains active with its one registered anonymous test wrapper; no housekeeping completion is claimed.
