@@ -152,3 +152,34 @@ The initial baseline commit check stopped on 36 native-export whitespace finding
 CAAB marked tab 61491471 for handoff at Export Application, then explicitly released ALL-browser ownership to GEO; GEO acknowledged acquisition. No browser operation, chooser, dialog or unsaved edit remained. CAAB root/children are HOLD. The artifact manifest is generation 10 with an active lease, two registered disposable records and two retained private archives; housekeeping is not complete.
 
 Paul reaffirmed all projects' current update-completion authority through the coordinator. Ordinary implementation, schema-local repairs, approved agent/UI changes, verification and Git delivery remain authorized; pending SERVICE security/installation decisions and enforced access restrictions remain separate. CAAB continues deployed package reconciliation and surgical implementation on its next coordinated browser slice. The current application baseline dependency is resolved; model usage remains 0/40.
+
+## Actual package baseline and static asset delivery
+
+After Policing explicitly released ALL-browser ownership, CAAB acknowledged and
+reused owned tab 61491471. An expired shared Builder session was restored through
+one authorized CODEX/AFMA native-autofill sign-in; APEX 26.1.4 and selected schema
+AFMA were verified. Guidance revision 2026-09-17.4 was refreshed and all 13 routed
+sources listed above fully reread after compaction. Topics: credentials,
+apex-source-control, ai-hub-workflow, apex-browser, github-delivery and
+artifact-hygiene. Fresh full bundle at 12:02:30 UTC and remaining early thread
+entries at 12:02:57 UTC confirmed caab-015 v3 / BUILD, pending human review and
+the intake-only R09 scope.
+
+Native SQL Commands captured all 1,112 source rows for the agent/page package
+specifications and bodies. Separate row/line/character aggregates match the
+concrete native CSV and exact reconstructed files. The database checkpoint is
+`exports/database/afma/20260917-120534-before-caab-015`; its README records source
+counts, hashes, download provenance and the rollback wrapper. Independent review
+found no semantic drift from candidate parent 61f0c5f^ and no detected forbidden
+secrets/session URLs. Each non-final captured source line has one extra trailing
+space; exact native source is preserved. Both specs match the candidate interfaces,
+allowing body-only replacement. Package replacement has not occurred at this
+checkpoint. The source CSV is registered retained in artifact generation 11.
+
+App 101 Shared Components initially contained five icon files and neither new
+asset. Native chooser uploads of canonical `apex/static/caab.css` (8,993 bytes)
+and `apex/static/caab-agent.js` (12,037 bytes) each returned `File(s) created`.
+The JS editor shows `#APP_FILES#caab-agent.js`, text/javascript and UTF-8, with
+the intended renderer source. This establishes asset creation, not runtime
+loading or application acceptance. No catalogue data, feedback configuration,
+credential or model call was changed. Model requests remain 0/40.
