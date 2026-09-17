@@ -38,6 +38,8 @@ Native APEX Markdown escapes embedded HTML. Model-created images are omitted; li
 
 Resolve a distinct AIDEMODB source-app service client with only `feedback.write`, `feedback.read`, `feedback.response.read`, and `feedback.response.acknowledge`. The AI Hub coordinator owns discovery/provisioning of that dependency. Never install the `codex-caab` automation key or a legacy ASHCROFT key in the app.
 
+The coordinator's 17 September source-only proposal names client `caab-apex-feedback` and a new Web Credential static ID `AI_HUB_CAAB_FEEDBACK_AIDEMODB`. Before creation, verify that the new static ID is absent in AFMA. Proposed header: `X-AI-Hub-API-Key`; proposed valid-URL prefix: the exact canonical feedback endpoint below, covering intake and child response resources. These are planned values, not issued-key, installation or activation evidence. Preserve legacy `AI_HUB_AFMA_FEEDBACK_API` unchanged. The named credential custodian and supported secret-preserving installation mechanism remain to be resolved through the coordinator; never transfer the raw value through chat, SQL text or browser automation payloads. Provisioning/activation retains its separate security decision.
+
 Verify the target Web Credential and its allowed URL before pairing it with these AFMA config values:
 
 - `AI_HUB_PROJECT_KEY = caab`
