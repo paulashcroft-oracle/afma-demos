@@ -63,7 +63,7 @@ select feedback_id, ai_hub_task_key, ai_hub_feedback_key, forward_status, decisi
  fetch first 10 rows only
 /
 
-prompt Live acceptance is separate: one approved feedback POST, identical replay, response read/ACK, then reread acknowledgement and ledger.
+prompt Live acceptance is separate: one approved feedback POST, validate its intake acknowledgement, replay identically, then reread the local ledger.
 prompt Verify caab project/source identity, identical keys on replay, no duplicate feedback/task, and no ASHCROFT request. Keep scheduling unactivated.
 
 prompt AFMA 086 complete

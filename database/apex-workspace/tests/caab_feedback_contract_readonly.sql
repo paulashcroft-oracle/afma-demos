@@ -31,7 +31,7 @@ begin
   l_json.remove('feedbackKey');
   l_json.remove('publicResponse');
   l_json.remove('taskAction');
-  expect(true, 'Task-backed acknowledgement can resolve source key separately');
+  expect(true, 'Task-backed intake acknowledgement has a valid task key');
   l_json.remove('taskKey');
   expect(false, 'Identifierless success must remain retryable');
   valid_response;
