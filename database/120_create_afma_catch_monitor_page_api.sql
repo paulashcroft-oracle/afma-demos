@@ -57,6 +57,18 @@ create or replace package body afma_cm_page_api as
            lpad(mod(trunc(coalesce(p_second, 0)), 60), 2, '0');
   end fmt_second;
 
+  function fmt_range(
+    p_start_second in number,
+    p_end_second   in number
+  ) return varchar2 is
+  begin
+    return fmt_second(p_start_second) ||
+           case
+             when p_end_second is not null and p_end_second <> p_start_second
+             then '–' || fmt_second(p_end_second)
+           end;
+  end fmt_range;
+
   function workbench_html return clob is
     l_html clob;
     l_trip_id number;
@@ -216,7 +228,7 @@ create or replace package body afma_cm_page_api as
        where o.analysis_run_id = l_run_id
        order by o.start_second, o.observation_id
     ) loop
-      add_line(l_html, '<article class="cm-event ' || case when o.observation_type = 'WILDLIFE' then 'cm-event-wildlife' end || '" data-observation-id="' || o.observation_id || '"><div class="cm-event__top"><div><h3>' || fmt_second(o.start_second) || ' · ' || h(replace(initcap(o.observation_type), '_', ' ')) || ' · ' || h(o.display_name) || '</h3><div><span class="cm-spcode">' || h(coalesce(o.taxon_spcode, 'CAAB unresolved')) || '</span> · confidence ' || to_char(o.ai_confidence * 100, 'FM990') || '% · proposed count ' || h(to_char(o.ai_count)) || '</div></div><span class="cm-badge ' || badge_class(o.reviewer_status) || '">' || h(o.reviewer_status) || '</span></div>');
+      add_line(l_html, '<article class="cm-event ' || case when o.observation_type = 'WILDLIFE' then 'cm-event-wildlife' end || '" data-observation-id="' || o.observation_id || '"><div class="cm-event__top"><div><h3>' || fmt_range(o.start_second, o.end_second) || ' · ' || h(replace(initcap(o.observation_type), '_', ' ')) || ' · ' || h(o.display_name) || '</h3><div><span class="cm-spcode">' || h(coalesce(o.taxon_spcode, 'CAAB unresolved')) || '</span> · confidence ' || to_char(o.ai_confidence * 100, 'FM990') || '% · proposed count ' || h(to_char(o.ai_count)) || '</div></div><span class="cm-badge ' || badge_class(o.reviewer_status) || '">' || h(o.reviewer_status) || '</span></div>');
       if o.evidence_role = 'PREVIEW_OR_REPLAY' or o.evidence_group_ref is not null then
         add_line(l_html, '<div class="cm-meta">' ||
           case when o.evidence_role = 'PREVIEW_OR_REPLAY' then '<span class="cm-badge cm-badge-warn">Edited preview / possible duplicate</span>' end ||

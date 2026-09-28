@@ -42,9 +42,9 @@ declare
     ) source
        on (target.analysis_run_id = source.analysis_run_id
        and target.observation_type = 'CATCH'
-       and target.start_second = source.start_second
-       and target.end_second = source.end_second)
+       and target.start_second = source.start_second)
      when matched then update set
+       target.end_second = p_end_second,
        target.ai_taxon_text = p_taxon_text,
        target.ai_spcode = p_spcode,
        target.ai_count = 1,
@@ -331,8 +331,8 @@ begin
    where t.trip_ref = 'CM-WA-001';
 
   upsert_observation(
-    l_west_run_id, 158, 177, 'Common Coral Trout', l_coral_spcode, .99,
-    'One fish is landed and displayed. Its spotted red/orange profile and repeated spoken identification as coral trout support the CAAB candidate; final retention and size are not inferred.'
+    l_west_run_id, 158, 180, 'Common Coral Trout', l_coral_spcode, .99,
+    'One fish is fought, landed and displayed from 02:38 until the scene changes at 03:00. Its spotted red/orange profile and repeated spoken identification as coral trout support the CAAB candidate; final retention and size are not inferred.'
   );
   upsert_observation(
     l_west_run_id, 202, 243, 'Chinamanfish', l_chinaman_spcode, .99,

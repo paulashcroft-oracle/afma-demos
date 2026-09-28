@@ -330,9 +330,9 @@ Application navigation for the MVP is: **Trips → Reported Data → Video Revie
 │ Fishery [ETBF ▼]  Gear [Longline ▼]  Region [NSW coast ▼]  Source [cleared]  │
 ├───────────────────────────────┬──────────────────────────────────────────────┤
 │ VIDEO + TIMELINE              │ REVIEW QUEUE                                 │
-│ [video frame / evidence boxes]│ 12:14 Catch · Coral trout? 0.86     [Review] │
-│                               │ 12:31 Wildlife sighting · seabird   [Review] │
-│ ───●─────●───────●────●──     │ 12:48 Possible interaction · turtle [Review] │
+│ [video frame / evidence boxes]│ 12:14–12:32 Catch · Coral trout?    [Review] │
+│                               │ 12:31–12:42 Wildlife · seabird      [Review] │
+│ ───●─────●───────●────●──     │ 12:48–13:06 Interaction · turtle   [Review] │
 │ Blue=catch Amber=possible     │ Filters: All · Needs review · Catch · Wildlife│
 ├───────────────────────────────┴──────────────────────────────────────────────┤
 │ AI-assisted · reviewer confirmation required · 4 unresolved                   │
@@ -340,6 +340,8 @@ Application navigation for the MVP is: **Trips → Reported Data → Video Revie
 ```
 
 Selecting an event opens evidence, species candidates and traits, count/fate controls, interaction status, confidence explanation, source guidance, reviewer decision, and `Confirm`, `Correct`, `Merge`, `Not an interaction`, `Escalate`. Use colour plus text/icon; low-confidence items default to review rather than silent inclusion.
+
+Every review card displays its complete evidence window as `MM:SS–MM:SS`, not just the first timestamp. The start is the earliest relevant hook-up or appearance used by the observation; the end is the last useful evidence frame or scene transition. These are evidence boundaries, not claims about exact capture, death, retention or release time.
 
 The reconciliation page is an operation register with filters and three columns: **frozen reported information**, **video evidence**, and **AFMA reviewer finding/action**. Each row shows a comparison outcome and links back to both the source report version and supporting clip. A footer enables `Complete review` only when critical alerts have a reviewed state. A guidance drawer provides source, applicability, review date, current concession conditions and relevant logbook instructions.
 
