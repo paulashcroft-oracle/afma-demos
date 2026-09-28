@@ -29,6 +29,12 @@ union all
 select 'OBSERVATIONS', count(*)
   from afma_cm_observations
 union all
+select 'VIDEO_SUBMISSIONS', count(*)
+  from afma_cm_video_submissions
+union all
+select 'PROMPT_CONTRACTS', count(*)
+  from afma_cm_prompt_contracts
+union all
 select 'AUDIT_EVENTS', count(*)
   from afma_cm_audit_events;
 
@@ -132,5 +138,66 @@ select coalesce(t.common_name, t.scientific_name, o.ai_taxon_text) species_name,
    and o.observation_type = 'CATCH'
  group by coalesce(t.common_name, t.scientific_name, o.ai_taxon_text), o.ai_spcode
  order by species_name;
+
+select submission_ref,
+       input_method,
+       display_title,
+       original_filename,
+       mime_type,
+       file_bytes,
+       processing_status,
+       processing_stage,
+       progress_percent,
+       processing_message,
+       processing_started_at,
+       processing_completed_at,
+       last_progress_at,
+       worker_job_ref,
+       storage_region,
+       inference_entry_region,
+       processor_location,
+       handling_notice_version,
+       rights_confirmed_yn,
+       handling_acknowledged_yn,
+       retention_review_at,
+       case when video_blob is not null then 'BLOB_PRESENT' else 'NO_BLOB' end payload_state,
+       case when source_url is not null then 'URL_PRESENT' else 'NO_URL' end url_state
+  from afma_cm_video_submissions
+ order by created_at desc;
+
+select processing_status,
+       processing_stage,
+       count(*) submission_count,
+       min(progress_percent) min_progress_percent,
+       max(progress_percent) max_progress_percent,
+       sum(case when analysis_run_id is not null then 1 else 0 end) linked_run_count
+  from afma_cm_video_submissions
+ where processing_status <> 'DELETED'
+ group by processing_status, processing_stage
+ order by processing_status, processing_stage;
+
+select count(*) incomplete_submission_scenario_count
+  from afma_cm_trips t
+ where t.status <> 'ARCHIVED'
+   and exists (
+     select 1
+       from afma_cm_video_submissions vs
+       join afma_cm_analysis_runs ar on ar.analysis_run_id = vs.analysis_run_id
+      where ar.trip_id = t.trip_id
+        and (vs.processing_status <> 'ANALYSIS_COMPLETE'
+             or coalesce(vs.processing_stage, '~') <> 'READY_FOR_REVIEW')
+   );
+
+select prompt_key,
+       prompt_version,
+       model_id,
+       service_static_id,
+       contract_status,
+       approved_at,
+       approved_by,
+       activated_at,
+       activated_by
+  from afma_cm_prompt_contracts
+ order by prompt_key, created_at desc;
 
 prompt AFMA 130 complete

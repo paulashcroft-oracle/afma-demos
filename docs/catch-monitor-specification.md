@@ -5,7 +5,7 @@ Prepared: 26 September 2026
 Implemented: 28 September 2026 under AI Hub task `caab-016`  
 Scope: AIDEMODB app 101 demonstrator, not a production reporting system.
 
-Implemented slice: reviewer-only page 4, versioned reported-data API, freeze/amend rules, CAAB-linked identities, selectable source-traced video cases, evidence-provenance labels, catch/wildlife review controls, reconciliation, audit events, governed media metadata, the hybrid-incremental library plan, West Moore ground truth and isolated APEX-to-Gemini trials. Publishing model output into the queue, structured per-fish measurements, private-object ingestion, bulk media discovery, import templates and production authorisation/retention controls remain later delivery gates.
+Implemented slice: reviewer-only page 4, versioned reported-data API, freeze/amend rules, CAAB-linked identities, selectable source-traced video cases, evidence-provenance labels, catch/wildlife review controls, reconciliation, audit events, governed media metadata, the hybrid-incremental library plan, West Moore ground truth, isolated APEX-to-Gemini trials, and authorised test-video upload/URL intake. Publishing newly submitted model output into the queue, structured per-fish measurements, bulk media discovery, import templates and production authorisation/retention controls remain later delivery gates.
 
 ## Implemented selectable video set
 
@@ -19,13 +19,54 @@ The selector changes the source video, description, synthetic/received compariso
 | `CM-WA-001` — [West Moore Island episode](https://www.youtube.com/watch?v=b4KcVC11KVI) | Nine unique fish: Common Coral Trout x1, Chinamanfish x4, Red Emperor x1 and Spanish Mackerel x3. The edited source also contains a 07:09 Coming Up preview of the first Spanish Mackerel landing. No wildlife interaction is evidenced. | Ten time-coded depicted-catch observations: nine unique fish plus the linked preview. All remain reviewer-visible; the preview is labelled as a possible duplicate rather than silently discarded. |
 | `CM-QLD-001` — original workflow fixture | The original public coral-trout-themed source used to exercise the first UI slice. | Explicitly labelled synthetic UI fixture; its four deterministic events are not claims about the video. |
 
-Each selected case displays its region, fishing context, duration where known, source link, rights status, annotation/evidence status and a plain-language description. Source narration may inform a note, but species-level CAAB identity remains unresolved unless the visual evidence and reference material support that precision. The current “AI” queue is therefore a deterministic evaluation fixture assembled from manual/source review, not the output of a connected computer-vision model.
+Each selected case displays its region, fishing context, duration where known, source link, rights status, annotation/evidence status and a plain-language description. Narration may inform the public-video benchmark only; production AFMA EM footage contains no audio. Species-level CAAB identity remains unresolved unless visual evidence and approved reference material support that precision. The current “AI” queue is therefore a deterministic evaluation fixture assembled from manual/source review, not the output of a connected computer-vision model.
 
 The first APEX-native Gemini experiment is documented in [Catch Monitor video-analysis options and benchmark](catch-monitor-video-analysis-options.md). Raw trial results remain in `AFMA_CM_AI_TRIALS`, isolated from `AFMA_CM_OBSERVATIONS`; no model response is automatically published to the review queue.
 
-Current model decision: use OCI Gemini 2.5 Pro in Chicago as the demonstrator's default video-analysis model. Flash comparison results remain recorded, but Flash is deferred unless later volume, latency or cost warrants a second tier.
+Current demo-model decision: use OCI Gemini 2.5 Pro through the Chicago OCI Generative AI endpoint for authorised public/internal test footage. The project owner has accepted this cross-border path for the controlled capability demonstration; it is a demonstration of what can be done, not a commitment to the eventual production deployment topology. Chicago is the OCI entry region, not the complete processing boundary: [Oracle's model endpoint documentation](https://docs.oracle.com/en-us/iaas/Content/generative-ai/model-endpoint-regions.htm) identifies Gemini as externally hosted by Google and says US-region requests are machine-processed in a Google Americas location. AFMA's September 2026 privacy summary says EM footage is video-only, must remain under AFMA control, and is not shared overseas unless authorised or required by law. Production use therefore requires a separate AFMA cross-border/data-processing decision or an Australian/private model deployment inside the approved secure environment—for example, a suitable model on OCI GPU/container infrastructure in Sydney where the required service and shape are available. Flash comparison results remain recorded, but Flash is deferred unless later volume, latency or cost warrants a second tier.
 
-Edited-source policy for this public demo: retain every visibly depicted catch as a reviewable observation, tag previews/replays explicitly, and link matching observations into an evidence group. The West Moore 07:09 preview is linked to the full 12:28–14:20 Spanish Mackerel sequence. This deliberately exposes the deduplication anomaly to viewers. Production AFMA recording-device footage is expected to be continuous and should not contain editorial Coming Up segments, but the provenance fields remain useful for repeated views, camera overlap and genuine duplicate detections.
+## AFMA electronic-monitoring capture model
+
+The official [AFMA electronic-monitoring explainer](https://www.youtube.com/watch?v=1jrKBK1JPZE), the current [AFMA electronic monitoring program](https://www.afma.gov.au/fisheries-management/monitoring-tools/electronic-monitoring-program), and the [September 2026 privacy-impact summary](https://www.afma.gov.au/sites/default/files/2026-09/E-monitoring%20Summary%20Privacy%20Impact%20Assessment%20(Sept%202026).pdf) establish the production source model:
+
+- three or more fixed cameras cover deck/work areas and fishing activity, commonly including deck, side and stern views;
+- hydraulic-pressure and drum-rotation sensors identify gear activity and trigger recording around setting and hauling;
+- GPS and associated telemetry provide time, position, speed, course, vessel identity and system state;
+- a vessel control centre stores footage and sensor data on hard drives, while a monitor provides live camera views and system checks;
+- AFMA compares reviewed footage/derived EM data with fisher logbook information and refers discrepancies through the authorised review process;
+- EM footage is fixed-camera **video only**: no microphones and no audio recordings; and
+- production footage is encrypted, access-controlled and audited, with strict chain of custody and the applicable AFMA retention/deletion rules.
+
+Design consequences:
+
+1. Audio extraction, speech recognition and narration-based species identification are not production requirements. The West Moore transcript/audio experiment remains historical public-video benchmark evidence only.
+2. Sensor/telemetry records are first-class inputs, not optional metadata. They should bound active-fishing windows, prioritise gear set/haul segments, align multiple camera streams and expose camera/sensor health.
+3. Multi-camera identity is required: the same catch may move through deck, side and stern views. Counting needs cross-camera tracking/evidence grouping rather than summing per-camera detections.
+4. Missing, obscured, dirty, mistimed or inactive views must produce coverage/quality findings, never an assumption that no catch or wildlife interaction occurred.
+5. AI outputs are derived EM data and remain proposals for authorised AFMA reviewers. They do not replace logbooks or human decision-making.
+
+## Authorised test-video intake and disclosure
+
+Page 4 accepts either a native APEX file upload or an HTTPS source URL, optional working-title/reviewer notes, and two explicit acknowledgements. Uploads are copied from `APEX_APPLICATION_TEMP_FILES` into `AFMA_CM_VIDEO_SUBMISSIONS.VIDEO_BLOB`; URL intake stores the URL and metadata only and does not fetch the remote file. The current direct-analysis limit is 35 MiB, below OCI Gemini 2.5 Pro's approximately 37.5 MiB original-file limit for base64 input. The accepted container list is MP4, MPEG, MOV, AVI, WebM, WMV, 3GPP and FLV.
+
+The application maintains three distinct metadata layers: the submitter's untouched working title/notes; Gemini Pro proposals with model, prompt, confidence, timestamp and raw-response provenance; and reviewer-approved editable values. For production AFMA EM, governed metadata must be derived from vision, on-screen text and separately authorised sensor/telemetry fields—not audio or speech. It must express uncertainty rather than invent missing facts. An AFMA reviewer can edit and save every final field, with `CONFIRMED` meaning the final values match the proposal and `CORRECTED` meaning they do not. The in-app prompt-review panel renders the exact system prompt, task prompt and JSON schema and records named approval/activation. Generate remains disabled until approval and is always an explicit per-upload action. The existing public-video metadata contract still mentions audio and must not be treated as a production AFMA EM contract; a revised exact prompt requires Paul's review before activation.
+
+APEX 26.1's `APEX_AI.T_ATTACHMENT` accepts BLOB/CLOB content rather than a remote URL. Therefore the current governed model action supports uploaded video bytes only. Registered video-page URLs enter `AWAITING_IMPORT` / `AWAITING_PROJECT_IMPORT`; they may be opened for source assessment but are not server-fetched, sent to the model or added to the scenario selector. Paul can then ask this project to perform a controlled, source-attributed import when authorised media bytes can be obtained. This avoids silently dereferencing signed URLs, YouTube pages or attacker-controlled/internal endpoints. A future automatic URI-ingestion path requires its own allow-list, size/type validation, redirect/SSRF controls and approved disclosure.
+
+The intake UI must disclose all of the following before submission:
+
+- storage: uploaded bytes and submission metadata are stored in the AFMA schema of AIDEMODB in OCI Sydney (`ap-sydney-1`); URL submissions store only the supplied URL and metadata;
+- retention: the demo records a 30-day retention-review date, but does not claim an automatic purge that is not implemented; authorised deletion clears the BLOB/URL while preserving minimal audit metadata;
+- processing: intake does not automatically invoke a model; when analysis is approved, the payload is sent through OCI Generative AI `us-chicago-1` to externally hosted Gemini processing in a Google Americas location;
+- service handling: [Oracle states](https://docs.oracle.com/en-us/iaas/Content/generative-ai/data-handling.htm) OCI Generative AI does not retain inference inputs/outputs and does not share prompts/responses with third-party model providers; the application nevertheless conservatively treats Google as a processing party because [Oracle's regional model notes](https://docs.oracle.com/en-us/iaas/Content/generative-ai/model-endpoint-regions.htm) say Gemini is externally hosted and the machine-learning processing occurs at Google;
+- training and transient retention: [Google states](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/vertex-ai-zero-data-retention) customer data is not used to train or fine-tune models without permission, while also documenting default in-memory caching of customer data for up to 24 hours and possible abuse-monitoring logging depending on the governing terms/settings;
+- external URL exposure: the hosting service may log browser or service access, and testers must not submit embedded credentials, signed URLs, uncleared personal information, vessel identifiers or operationally sensitive material.
+
+Every new URL intake record starts as `AWAITING_IMPORT` at five percent, with an explicit statement that no video bytes are stored and no model call has started. An uploaded BLOB enters `ANALYSING` / `QUEUED_FOR_ANALYSIS` at twenty percent. The West Moore prompt is deliberately not reused for arbitrary footage because its CAAB shortlist and edited-program assumptions are scenario-specific. No general-purpose evidence prompt may be activated until its exact system prompt, task prompt, output schema and benchmark diff are shown for human approval.
+
+The persistent intake disclosure and submitter acknowledgements replace the demo's earlier per-submission approval button. Prompt-contract approval remains a separate, auditable decision authorising a specific immutable instruction/schema version. The visible processing-and-clearance queue records stage, percentage, status message, proposed-event count and last update. Only `ANALYSIS_COMPLETE` / `READY_FOR_REVIEW` submissions are added to the scenario selector.
+
+Edited-source policy for this public demo: retain every visibly depicted catch as a reviewable observation, tag previews/replays explicitly, and link matching observations into an evidence group. The West Moore 07:09 preview is linked to the full 12:28–14:20 Spanish Mackerel sequence. This deliberately exposes the deduplication anomaly to viewers. Production AFMA recording-device footage is expected to be continuous and should not contain editorial Coming Up segments or audio, but the provenance fields remain essential for repeated views, overlapping cameras and genuine duplicate detections.
 
 ## Decision requested
 
@@ -292,6 +333,8 @@ The guidance drawer provides AFMA reviewer sources for species ID, interaction d
 ### FR-6 — Audit, privacy, and retention
 
 Record immutable decision history, model version, confidence, evidence hashes, and reviewer identity. Use least-privilege roles, encryption in transit/at rest, access logging, working-area/active-fishing capture only, and no audio. Default to a six-month footage deletion baseline aligned to AFMA’s PIA unless a stricter approved demo policy is chosen. Internal analysis/reference use follows the recorded rights status; custom model training requires an explicit recorded data-use decision.
+
+The internal tester-intake slice uses a stricter 30-day retention-review marker. Until an automated retention job is implemented and verified, the product must state that deletion is manual rather than promising an automatic expiry. Deletion clears the stored BLOB or URL and retains the submission reference, actor, notice version and lifecycle timestamps for audit.
 
 ### FR-7 — Prompt governance and human approval
 

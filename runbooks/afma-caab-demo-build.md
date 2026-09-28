@@ -99,6 +99,15 @@ end;
 - Page 4: Catch Monitor
   - Dynamic Content source: `return afma_cm_page_api.workbench_html;`
   - Ajax Callback process name: `AFMA_CM_ACTION`.
+  - Intake Ajax Callback process name: `AFMA_CM_INTAKE_ACTION`; upload submit request: `STAGE_UPLOAD`.
+  - Native items: `P4_VIDEO_TITLE`, `P4_VIDEO_DESCRIPTION`, `P4_VIDEO_URL`, `P4_VIDEO_FILE`, `P4_RIGHTS_ACK`, `P4_HANDLING_ACK`. File upload uses `APEX_APPLICATION_TEMP_FILES` and is copied into `AFMA_CM_VIDEO_SUBMISSIONS` by `AFMA_CM_VIDEO_INTAKE_API`.
+  - Uploads are limited to 35 MiB. URL registration stores metadata only. Both routes require authority and data-handling acknowledgement. URL rows enter `AWAITING_IMPORT` / `AWAITING_PROJECT_IMPORT`; uploaded BLOBs enter `ANALYSING` / `QUEUED_FOR_ANALYSIS`.
+  - Working title and reviewer notes are optional. The submission ledger separates untouched submitter input, Gemini-proposed title/description/region/fishery/gear with provenance, and reviewer-approved editable values. The Generate control remains disabled until its prompt contract is approved; reviewer metadata editing is active.
+  - Expand **Prompt contract review**, read the verbatim system/task prompts and JSON schema, tick the acknowledgement, then use **Approve and activate metadata prompt**. This records the authenticated reviewer and activation time; it does not start analysis automatically.
+  - **Generate with Gemini Pro** is available only when an uploaded video reaches the governed model action. Registered page URLs wait for a controlled project import because the current APEX attachment path requires video bytes.
+  - The prior per-submission approval button is removed. The persistent disclosure and acknowledgements are sufficient for this controlled demo; prompt-contract approval remains separate.
+  - The visible **Video processing & clearance** table shows stage, progress, proposed-event count and last update. Only `ANALYSIS_COMPLETE` / `READY_FOR_REVIEW` records appear in the scenario selector.
+  - The UI states the full boundary: storage in AIDEMODB Sydney; OCI Generative AI entry in Chicago; external Google Americas Gemini processing; Oracle non-retention claims; Google no-training commitment plus documented transient-cache/abuse-monitoring caveats.
   - Authorised AFMA reviewer workflow; fishers are represented by a versioned `SYNTHETIC_DEMO` or `RECEIVED_RECORD`, not given an MVP portal.
   - The seeded `CM-QLD-001` scenario uses the source-traced Queensland Coral Trout Fishery video and four `SIMULATED_DEMO` observations. The observations are deterministic workflow fixtures and are not asserted to have been measured from the linked video.
   - Reported data can be amended only by creating a new version. `FROZEN_FOR_REVIEW` versions remain immutable.
@@ -196,7 +205,9 @@ Minimum checks before moving the build tasks to Test:
 - `AFMA_AI_HUB_FORWARDER`, `AI_HUB_FEEDBACK_FORWARDS`, and `AI_HUB_FEEDBACK_CANDIDATES_V` are valid.
 - APEX Web Credential metadata `AI_HUB_AFMA_FEEDBACK_API` exists in the live workspace or APEX application/source evidence; the raw key is not stored in the repository.
 - AI Hub project metadata is updated with confirmed app ID, runtime URL, and builder URL.
-- `database/130_verify_afma_catch_monitor.sql` reports all `AFMA_CM_%` objects valid and five selectable cases: `CM-QLD-002` (3 evidence events), `CM-QLD-003` (1 source-described aggregate), `CM-QLD-004` (3 events), `CM-WA-001` (0 pending-annotation events), and `CM-QLD-001` (4 explicitly synthetic fixture events).
+- `database/130_verify_afma_catch_monitor.sql` reports all `AFMA_CM_%` objects valid, the video-intake table/package valid, and the five selectable supplied cases with their current evidence counts.
+- Page 4 stages an HTTPS URL only after both acknowledgements, lists it as `AWAITING_PROJECT_IMPORT`, excludes it from the scenario selector until clearance, and clears the URL on the authorised delete action while retaining audit metadata.
+- Page 4 stages a supported upload through `APEX_APPLICATION_TEMP_FILES`, records byte/mime/file metadata in AIDEMODB, rejects empty/oversized/unsupported files, and clears the BLOB on deletion.
 - Catch Monitor visibly labels `AI-assisted review — reviewer confirmation required`, `DEMO DATA`, source/region/context, annotation status, model/evidence version and media manifest.
 - The video selector changes source, description, reported comparison data and review queue together through server-generated checksum-protected page URLs.
 - Frozen reported data can be cloned as an amendment; the editable version provides audited entry for catch lines and wildlife interactions before it is re-frozen for review.

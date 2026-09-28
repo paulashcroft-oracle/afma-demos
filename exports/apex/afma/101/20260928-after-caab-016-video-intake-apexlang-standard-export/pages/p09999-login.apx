@@ -1,0 +1,317 @@
+page 9999 (
+    name: Login Page
+    alias: LOGIN
+    title: AFMA CAAB AI Demo - Log In
+    appearance {
+        pageTemplate: @/login
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authentication: public
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region afma-caab-ai-demo (
+        name: AFMA CAAB AI Demo
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/login
+            templateOptions: #DEFAULT#
+        }
+        image {
+            fileUrl: #APP_FILES#icons/app-icon-512.png
+        }
+    )
+
+    region demo-user-login (
+        name: Demo User Login
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                
+                <style>
+                .afma-demo-login { margin:.35rem 0 1rem; display:grid; gap:.55rem; }
+                .afma-demo-login__divider { display:flex; align-items:center; gap:.6rem; color:#607080; font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+                .afma-demo-login__divider:before, .afma-demo-login__divider:after { content:""; height:1px; background:#d9e2ec; flex:1; }
+                .afma-demo-login__note { margin:0; color:#52606d; font-size:.86rem; line-height:1.45; }
+                </style>
+                <div class="afma-demo-login">
+                  <button class="t-Button t-Button--hot t-Button--large t-Button--stretch" type="button" onclick="apex.submit('DEMO_LOGIN');">Continue as Demo User</button>
+                  <p class="afma-demo-login__note">For QR and mobile demos. Opens the app as DEMO_USER so AFMA CAAB AI activity remains visible in the audit trail.</p>
+                  <div class="afma-demo-login__divider">or sign in</div>
+                </div>
+                
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: contentBody
+        }
+        advanced {
+            htmlDomId: demo-user-login
+        }
+    )
+
+    pageItem P9999_PASSWORD (
+        type: password
+        label {
+            label: Password
+            alignment: right
+        }
+        layout {
+            sequence: 20
+            region: @afma-caab-ai-demo
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+            icon: fa-key
+            width: 40
+            valuePlaceholder: Password
+        }
+        validation {
+            maxLength: 100
+        }
+        advanced {
+            customAttributes: autocomplete="current-password"
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P9999_REMEMBER (
+        type: checkbox
+        label {
+            label: Remember username
+            alignment: right
+        }
+        layout {
+            sequence: 30
+            region: @afma-caab-ai-demo
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: apex_authentication.persistent_cookies_enabled
+        }
+    )
+
+    pageItem P9999_USERNAME (
+        type: textField
+        label {
+            label: Username
+            alignment: right
+        }
+        layout {
+            sequence: 10
+            region: @afma-caab-ai-demo
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+            icon: fa-user
+            width: 40
+            valuePlaceholder: Username
+        }
+        validation {
+            maxLength: 100
+        }
+        advanced {
+            customAttributes: autocomplete="username"
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    button login (
+        buttonName: LOGIN
+        label: Sign In
+        layout {
+            sequence: 40
+            region: @afma-caab-ai-demo
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    process clear-page-s-cache (
+        name: Clear Page(s) Cache
+        type: clearSessionState
+        execution {
+            sequence: 30
+        }
+        advanced {
+            executionMappingIdentifier: 14546773808355845
+        }
+    )
+
+    process demo-user-login (
+        name: Demo User Login
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                begin
+                  if apex_application.g_request = 'DEMO_LOGIN' then
+                    apex_authentication.post_login(
+                      p_username           => 'DEMO_USER',
+                      p_password           => 'DEMO',
+                      p_uppercase_username => true
+                    );
+                
+                    apex_util.redirect_url(apex_page.get_url(p_page => 1));
+                    apex_application.stop_apex_engine;
+                  end if;
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 1
+        }
+        advanced {
+            executionMappingIdentifier: 1010500001
+        }
+        serverSideCondition {
+            type: request=Value
+            value: DEMO_LOGIN
+        }
+    )
+
+    process get-username-cookie (
+        name: Get Username Cookie
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                :P9999_USERNAME := apex_authentication.get_login_username_cookie;
+                :P9999_REMEMBER := case when :P9999_USERNAME is not null then 'Y' end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 14546379864355844
+        }
+    )
+
+    process login (
+        name: Login
+        type: invokeApi
+        invoke {
+            package: APEX_AUTHENTICATION
+            procedureOrFunction: LOGIN
+        }
+        execution {
+            sequence: 20
+        }
+        advanced {
+            executionMappingIdentifier: 14543097690355838
+        }
+
+        parameter p_password (
+            value {
+                type: item
+                item: P9999_PASSWORD
+            }
+            advanced {
+                displaySequence: 2
+            }
+        )
+
+        parameter p_set_persistent_auth (
+            parameter {
+                dataType: boolean
+                hasDefault: true
+            }
+            value {
+                type: apiDefault
+            }
+            advanced {
+                displaySequence: 3
+            }
+        )
+
+        parameter p_username (
+            value {
+                type: item
+                item: P9999_USERNAME
+            }
+            advanced {
+                displaySequence: 1
+            }
+        )
+
+    )
+
+    process set-username-cookie (
+        name: Set Username Cookie
+        type: invokeApi
+        invoke {
+            package: APEX_AUTHENTICATION
+            procedureOrFunction: SEND_LOGIN_USERNAME_COOKIE
+        }
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 14544921718355843
+        }
+
+        parameter p_consent (
+            parameter {
+                dataType: boolean
+            }
+            value {
+                type: item
+                item: P9999_REMEMBER
+            }
+            advanced {
+                displaySequence: 2
+            }
+        )
+
+        parameter p_username (
+            value {
+                type: expression
+                plsqlExpression: lower( :P9999_USERNAME )
+            }
+            advanced {
+                displaySequence: 1
+            }
+        )
+
+    )
+
+)
+

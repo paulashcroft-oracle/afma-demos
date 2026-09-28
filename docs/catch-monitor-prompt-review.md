@@ -2,7 +2,7 @@
 
 Status: **human approval required before the next prompt activation**
 Prepared: 28 September 2026
-Executable source: `database/135_create_afma_catch_monitor_video_ai_trial.sql`
+Executable sources: `database/116_add_afma_catch_monitor_prompt_governance.sql` and `database/135_create_afma_catch_monitor_video_ai_trial.sql`
 
 This register makes the current experimental prompt contracts reviewable. It does not approve them for production or autonomous publication. Until an in-app registry exists, any prompt change must update this document and the executable package together and must not be activated until Paul has reviewed the exact contract and benchmark diff.
 
@@ -13,8 +13,28 @@ This register makes the current experimental prompt contracts reviewable. It doe
 | `west-moore-caab-events-v1` | Current package default for controlled trials | Not production-approved | Pro correctly detected three Chinamanfish plus the Spanish Mackerel Coming Up preview. Confidence `1.0` was excessive and the event total did not distinguish depicted observations from cross-video unique catches. |
 | `west-moore-caab-events-v2` | Experimental comparison only | Not approved; do not activate | Added hard bounds, unit rows and teaser/replay exclusion. Improved arithmetic but introduced evidence suppression. |
 | `west-moore-caab-events-v3` | Experimental comparison only | Not approved; do not activate | Added transcript context. Pro returned valid JSON and two correctly identified Chinamanfish but missed the third fish and excluded the reviewable preview by instruction. |
+| `catch-monitor-metadata-v1` | In-app governed public-demo contract | Previously approved for controlled demo use; not a production AFMA EM prompt | Proposes title, description, region, fishery and gear from uploaded video/audio. AFMA EM footage has no audio, so a reviewed vision/sensor-only successor is required before production use. It cannot create evidence events or compliance findings. |
 
 No v4 prompt is proposed or active. Its wording will be drafted only after review of the desired depicted-event, evidence-linking and unique-catch semantics.
+
+## Production AFMA EM prompt invariant
+
+AFMA's [September 2026 privacy-impact summary](https://www.afma.gov.au/sites/default/files/2026-09/E-monitoring%20Summary%20Privacy%20Impact%20Assessment%20(Sept%202026).pdf) states that EM footage is fixed-camera video only, with no microphones or audio recordings. Therefore every production AFMA EM prompt and schema must:
+
+- analyse vision, on-screen text and separately supplied authorised sensor/telemetry only;
+- never request, infer or claim evidence from speech, narration, ambient sound or audio tracks;
+- represent `audio_present=false` or an equivalent provenance fact when useful, rather than treating silence as missing evidence;
+- use gear-sensor/GPS/time/camera identifiers to bound and align events;
+- support cross-camera evidence grouping so the same fish is not counted once per view; and
+- keep the West Moore audio/transcript behaviour explicitly isolated as public-video benchmark history.
+
+The current executable metadata v1 and West Moore trial prompts are not being silently rewritten. Any successor will be shown verbatim with its schema and benchmark diff for Paul's approval before activation.
+
+## Metadata v1 exact contract — governed draft
+
+The exact system prompt, task prompt and JSON schema are seeded by `database/116_add_afma_catch_monitor_prompt_governance.sql` and rendered verbatim in the Catch Monitor prompt-review panel. Approval is a named, timestamped transition from `DRAFT` to `ACTIVE`; it is never implied by uploading or registering a video. Activation enables only an explicit metadata-generation action for uploaded BLOBs. It does not process registered video-page URLs, run automatically, create catch events, change reported data or publish a compliance finding.
+
+The contract requires empty strings for unsupported fields, prohibits using filename/URL/working title/reviewer notes as evidence, prohibits identifying people, and separates metadata from catch counting/species/wildlife analysis. Its output includes title, description, region, fishery, gear, reviewer summary, confidence, field-level evidence basis and uncertainties. AI fields remain proposals until an AFMA reviewer applies, edits and saves them.
 
 ## v1 exact contract — current controlled-trial default
 
@@ -71,7 +91,7 @@ Current schema limitation: it has no distinct `depicted_event_total`, `evidence_
 - exact system and task prompt text;
 - exact response schema and deterministic validators;
 - semantic diff from the active/default contract;
-- expected handling of visible displays, multi-hook rigs, other anglers, previews/replays, overlapping cameras, narration corrections and wildlife;
+- expected handling of visible displays, multi-hook rigs, other anglers, previews/replays, overlapping cameras, sensor-triggered windows and wildlife; narration correction applies only to labelled non-AFMA public-video benchmarks;
 - replay against every approved benchmark clip;
 - false-positive, false-negative, duplicate and unresolved counts;
 - named approver, decision, activation time and rollback version.

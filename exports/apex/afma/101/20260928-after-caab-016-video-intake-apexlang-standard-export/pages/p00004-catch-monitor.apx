@@ -1,0 +1,509 @@
+page 4 (
+    name: Catch Monitor
+    alias: CATCH-MONITOR
+    title: AFMA Catch Monitor
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region afma-catch-monitor (
+        name: AFMA Catch Monitor
+        type: dynamicContent
+        source {
+            plsqlFunctionBody: return afma_cm_page_api.workbench_html;
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        advanced {
+            htmlDomId: afma-catch-monitor
+        }
+    )
+
+    pageItem P4_HANDLING_ACK (
+        type: checkbox
+        label {
+            label: I understand the Sydney storage, Chicago OCI entry, Google Americas processing and external-host exposure described above.
+            alignment: left
+        }
+        settings {
+            useDefaults: false
+            checkedValue: Y
+            uncheckedValue: N
+        }
+        layout {
+            sequence: 150
+            slot: body
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P4_RIGHTS_ACK (
+        type: checkbox
+        label {
+            label: I confirm AFMA is authorised to use this footage for controlled internal evaluation.
+            alignment: left
+        }
+        settings {
+            useDefaults: false
+            checkedValue: Y
+            uncheckedValue: N
+        }
+        layout {
+            sequence: 140
+            slot: body
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P4_VIDEO_DESCRIPTION (
+        type: textarea
+        label {
+            label: What the footage shows
+            alignment: left
+        }
+        settings {
+            autoHeight: true
+            charCounter: true
+        }
+        layout {
+            sequence: 110
+            slot: body
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: [
+                #DEFAULT#
+                t-Form-fieldContainer--stretchInputs
+            ]
+            width: 80
+            height: 3
+            valuePlaceholder: Species/catch context, location, gear, known wildlife interactions and anything the reviewer should look for
+        }
+        validation {
+            maxLength: 2000
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P4_VIDEO_FILE (
+        type: fileUpload
+        label {
+            label: Video file
+            alignment: left
+        }
+        display {
+            displayAs: blockDropzone
+        }
+        storage {
+            type: appTempFiles
+            purgeFileAt: END_OF_REQUEST
+            fileTypes: .mp4,.mpeg,.mpg,.mov,.avi,.webm,.wmv,.3gp,.3gpp,.flv,video/*
+            maxFileSize: 36700160
+        }
+        layout {
+            sequence: 130
+            slot: body
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: [
+                #DEFAULT#
+                t-Form-fieldContainer--stretchInputs
+            ]
+            width: 80
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P4_VIDEO_TITLE (
+        type: textField
+        label {
+            label: Test footage title
+            alignment: left
+        }
+        layout {
+            sequence: 100
+            slot: body
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: [
+                #DEFAULT#
+                t-Form-fieldContainer--stretchInputs
+            ]
+            width: 80
+            valuePlaceholder: e.g. ETBF longline haul — trip sample 1
+        }
+        validation {
+            maxLength: 500
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P4_VIDEO_URL (
+        type: textField
+        label {
+            label: HTTPS video or video-page URL
+            alignment: left
+        }
+        settings {
+            subtype: url
+        }
+        layout {
+            sequence: 120
+            slot: body
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: [
+                #DEFAULT#
+                t-Form-fieldContainer--stretchInputs
+            ]
+            width: 100
+            valuePlaceholder: https://…
+        }
+        validation {
+            maxLength: 2000
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    process afma-cm-action (
+        name: AFMA_CM_ACTION
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                declare
+                  l_action varchar2(40) := upper(apex_application.g_x01);
+                  l_trip_id number := to_number(apex_application.g_x02);
+                begin
+                  apex_json.open_object;
+                  begin
+                    case l_action
+                      when 'ADD_CATCH' then
+                        afma_cm_api.save_reported_catch(
+                          p_trip_id             => l_trip_id,
+                          p_original_taxon_text => apex_application.g_x03,
+                          p_reported_count      => case when apex_application.g_x04 is null then null else to_number(apex_application.g_x04) end,
+                          p_reported_weight_kg  => case when apex_application.g_x05 is null then null else to_number(apex_application.g_x05) end,
+                          p_catch_state         => apex_application.g_x06
+                        );
+                      when 'FREEZE' then
+                        afma_cm_api.freeze_report(l_trip_id);
+                      when 'AMEND' then
+                        afma_cm_api.create_amendment(l_trip_id, apex_application.g_x03);
+                      when 'REVIEW' then
+                        afma_cm_api.review_observation(
+                          p_trip_id                    => l_trip_id,
+                          p_observation_id             => to_number(apex_application.g_x03),
+                          p_reviewer_status            => apex_application.g_x04,
+                          p_reviewed_spcode            => apex_application.g_x05,
+                          p_reviewed_count             => case when apex_application.g_x06 is null then null else to_number(apex_application.g_x06) end,
+                          p_reviewed_interaction_class => apex_application.g_x07,
+                          p_reviewer_notes             => apex_application.g_x08
+                        );
+                      when 'COMPLETE' then
+                        afma_cm_api.complete_review(l_trip_id);
+                      else
+                        raise_application_error(-20020, 'Unsupported Catch Monitor action.');
+                    end case;
+                    apex_json.write('success', true);
+                  exception
+                    when others then
+                      apex_json.write('success', false);
+                      apex_json.write('message', sqlerrm);
+                  end;
+                  apex_json.close_object;
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 10
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 1010800402
+        }
+    )
+
+    process afma-cm-intake-action (
+        name: AFMA_CM_INTAKE_ACTION
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                declare
+                  l_action varchar2(40) := upper(apex_application.g_x01);
+                  l_submission_id number;
+                begin
+                  apex_json.open_object;
+                  begin
+                    case l_action
+                      when 'STAGE_URL' then
+                        l_submission_id := afma_cm_video_intake_api.stage_url(
+                          p_title                    => apex_application.g_x02,
+                          p_source_url               => apex_application.g_x03,
+                          p_description              => apex_application.g_x04,
+                          p_rights_confirmed_yn      => apex_application.g_x05,
+                          p_handling_acknowledged_yn => apex_application.g_x06
+                        );
+                      when 'DELETE_SUBMISSION' then
+                        afma_cm_video_intake_api.delete_submission(to_number(apex_application.g_x02));
+                      else
+                        raise_application_error(-20071, 'Unsupported Catch Monitor intake action.');
+                    end case;
+                    commit;
+                    apex_json.write('success', true);
+                    if l_submission_id is not null then
+                      apex_json.write('submissionId', l_submission_id);
+                    end if;
+                  exception
+                    when others then
+                      rollback;
+                      apex_json.write('success', false);
+                      apex_json.write('message', sqlerrm);
+                  end;
+                  apex_json.close_object;
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 20
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 1010800416
+        }
+    )
+
+    process afma-cm-metadata-action (
+        name: AFMA_CM_METADATA_ACTION
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                declare
+                  l_action varchar2(40) := upper(apex_application.g_x01);
+                begin
+                  apex_json.open_object;
+                  begin
+                    if l_action <> 'SAVE_METADATA' then
+                      raise_application_error(-20073, 'Unsupported Catch Monitor metadata action.');
+                    end if;
+                    afma_cm_video_intake_api.save_reviewed_metadata(
+                      p_submission_id => to_number(apex_application.g_x02),
+                      p_title         => apex_application.g_x03,
+                      p_description   => apex_application.g_x04,
+                      p_region        => apex_application.g_x05,
+                      p_fishery       => apex_application.g_x06,
+                      p_gear_method   => apex_application.g_x07
+                    );
+                    commit;
+                    apex_json.write('success', true);
+                  exception
+                    when others then
+                      rollback;
+                      apex_json.write('success', false);
+                      apex_json.write('message', sqlerrm);
+                  end;
+                  apex_json.close_object;
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 30
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 1010800418
+        }
+    )
+
+    process afma-cm-prompt-action (
+        name: AFMA_CM_PROMPT_ACTION
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                declare
+                  l_action varchar2(40) := upper(apex_application.g_x01);
+                begin
+                  apex_json.open_object;
+                  begin
+                    case l_action
+                      when 'APPROVE' then
+                        afma_cm_prompt_api.approve_and_activate(
+                          p_prompt_contract_id => to_number(apex_application.g_x02),
+                          p_acknowledged_yn     => apex_application.g_x03
+                        );
+                      when 'RUN_METADATA' then
+                        afma_cm_prompt_api.run_metadata(
+                          p_submission_id => to_number(apex_application.g_x02)
+                        );
+                      else
+                        raise_application_error(-20107, 'Unsupported Catch Monitor prompt action.');
+                    end case;
+                    commit;
+                    apex_json.write('success', true);
+                  exception
+                    when others then
+                      rollback;
+                      apex_json.write('success', false);
+                      apex_json.write('message', sqlerrm);
+                  end;
+                  apex_json.close_object;
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 40
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 1010800419
+        }
+    )
+
+    process afma-cm-submission-action (
+        name: AFMA_CM_SUBMISSION_ACTION
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                declare
+                  l_action varchar2(40) := upper(apex_application.g_x01);
+                begin
+                  apex_json.open_object;
+                  begin
+                    if l_action <> 'APPROVE_SUBMISSION' then
+                      raise_application_error(-20075, 'Unsupported Catch Monitor submission action.');
+                    end if;
+                    afma_cm_video_intake_api.approve_submission(
+                      p_submission_id   => to_number(apex_application.g_x02),
+                      p_acknowledged_yn => apex_application.g_x03
+                    );
+                    commit;
+                    apex_json.write('success', true);
+                  exception
+                    when others then
+                      rollback;
+                      apex_json.write('success', false);
+                      apex_json.write('message', sqlerrm);
+                  end;
+                  apex_json.close_object;
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 50
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 1010800420
+        }
+    )
+
+    process stage-test-video-upload (
+        name: Stage Test Video Upload
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                declare
+                  l_submission_id number;
+                begin
+                  l_submission_id := afma_cm_video_intake_api.stage_upload(
+                    p_title                    => :P4_VIDEO_TITLE,
+                    p_description              => :P4_VIDEO_DESCRIPTION,
+                    p_apex_temp_file_name      => :P4_VIDEO_FILE,
+                    p_rights_confirmed_yn      => :P4_RIGHTS_ACK,
+                    p_handling_acknowledged_yn => :P4_HANDLING_ACK
+                  );
+                  apex_application.g_print_success_message := 'Test video staged as submission ' || l_submission_id || '. Analysis is waiting for an approved prompt.';
+                  apex_util.set_session_state('P4_VIDEO_TITLE', null);
+                  apex_util.set_session_state('P4_VIDEO_DESCRIPTION', null);
+                  apex_util.set_session_state('P4_VIDEO_URL', null);
+                  apex_util.set_session_state('P4_VIDEO_FILE', null);
+                  apex_util.set_session_state('P4_RIGHTS_ACK', 'N');
+                  apex_util.set_session_state('P4_HANDLING_ACK', 'N');
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        successMessage {
+            successMessage: Test video staged. Analysis is waiting for an approved prompt.
+        }
+        advanced {
+            executionMappingIdentifier: 1010800417
+        }
+        serverSideCondition {
+            type: request=Value
+            value: STAGE_UPLOAD
+        }
+    )
+
+)
+
