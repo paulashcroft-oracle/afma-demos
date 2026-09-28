@@ -23,6 +23,9 @@ union all
 select 'MEDIA_ASSETS', count(*)
   from afma_cm_media_assets
 union all
+select 'MEDIA_OBJECTS', count(*)
+  from afma_cm_media_objects
+union all
 select 'ANALYSIS_RUNS', count(*)
   from afma_cm_analysis_runs
 union all
@@ -175,6 +178,25 @@ select processing_status,
  where processing_status <> 'DELETED'
  group by processing_status, processing_stage
  order by processing_status, processing_stage;
+
+select vs.submission_ref,
+       vs.display_title,
+       mo.object_key,
+       mo.object_role,
+       mo.original_filename,
+       mo.mime_type,
+       mo.file_bytes,
+       dbms_lob.getlength(mo.content_blob) stored_blob_bytes,
+       mo.sha256,
+       mo.duration_seconds,
+       mo.source_video_id,
+       mo.acquisition_method,
+       mo.audio_present_yn,
+       mo.storage_region,
+       mo.retention_review_at
+  from afma_cm_media_objects mo
+  join afma_cm_video_submissions vs on vs.submission_id = mo.submission_id
+ order by mo.created_at desc;
 
 select count(*) incomplete_submission_scenario_count
   from afma_cm_trips t

@@ -99,12 +99,12 @@ end;
 - Page 4: Catch Monitor
   - Dynamic Content source: `return afma_cm_page_api.workbench_html;`
   - Ajax Callback process name: `AFMA_CM_ACTION`.
-  - Intake Ajax Callback process name: `AFMA_CM_INTAKE_ACTION`; upload submit request: `STAGE_UPLOAD`.
-  - Native items: `P4_VIDEO_TITLE`, `P4_VIDEO_DESCRIPTION`, `P4_VIDEO_URL`, `P4_VIDEO_FILE`, `P4_RIGHTS_ACK`, `P4_HANDLING_ACK`. File upload uses `APEX_APPLICATION_TEMP_FILES` and is copied into `AFMA_CM_VIDEO_SUBMISSIONS` by `AFMA_CM_VIDEO_INTAKE_API`.
-  - Uploads are limited to 35 MiB. URL registration stores metadata only. Both routes require authority and data-handling acknowledgement. URL rows enter `AWAITING_IMPORT` / `AWAITING_PROJECT_IMPORT`; uploaded BLOBs enter `ANALYSING` / `QUEUED_FOR_ANALYSIS`.
+  - Intake Ajax Callback process name: `AFMA_CM_INTAKE_ACTION`; controlled project imports use `AFMA_CM_MEDIA_IMPORT_ACTION`; native browser uploads use `AFMA_CM_NATIVE_UPLOAD_ACTION`.
+  - Native items: `P4_VIDEO_TITLE`, `P4_VIDEO_DESCRIPTION`, `P4_VIDEO_URL`, `P4_VIDEO_FILE`, `P4_RIGHTS_ACK`, `P4_HANDLING_ACK`. The upload control hashes the file and sends sequential chunks without a page submit, avoiding the unreliable `APEX_APPLICATION_TEMP_FILES` handoff that previously raised `ORA-20066`.
+  - Uploads are limited to 35 MiB. URL registration initially stores metadata only. Both routes require authority and data-handling acknowledgement. URL rows enter `AWAITING_IMPORT` / `AWAITING_PROJECT_IMPORT`; stored native/imported BLOBs reach `READY_FOR_ANALYSIS` / `AWAITING_ANALYSIS_PROMPT_REVIEW` at 30% after byte-length/hash verification.
   - Working title and reviewer notes are optional. The submission ledger separates untouched submitter input, Gemini-proposed title/description/region/fishery/gear with provenance, and reviewer-approved editable values. The Generate control remains disabled until its prompt contract is approved; reviewer metadata editing is active.
   - Expand **Prompt contract review**, read the verbatim system/task prompts and JSON schema, tick the acknowledgement, then use **Approve and activate metadata prompt**. This records the authenticated reviewer and activation time; it does not start analysis automatically.
-  - **Generate with Gemini Pro** is available only when an uploaded video reaches the governed model action. Registered page URLs wait for a controlled project import because the current APEX attachment path requires video bytes.
+  - **Generate with Gemini Pro** is available only when stored video reaches the governed model action. Registered page URLs wait for a controlled project import because the current APEX attachment path requires video bytes. Jake Unger and The Life of a Fisherman currently have exact video-only BLOBs stored at the prompt-review gate; neither has proposed events or a model call yet.
   - The prior per-submission approval button is removed. The persistent disclosure and acknowledgements are sufficient for this controlled demo; prompt-contract approval remains separate.
   - The visible **Video processing & clearance** table shows stage, progress, proposed-event count and last update. Only `ANALYSIS_COMPLETE` / `READY_FOR_REVIEW` records appear in the scenario selector.
   - The UI states the full boundary: storage in AIDEMODB Sydney; OCI Generative AI entry in Chicago; external Google Americas Gemini processing; Oracle non-retention claims; Google no-training commitment plus documented transient-cache/abuse-monitoring caveats.
@@ -207,7 +207,7 @@ Minimum checks before moving the build tasks to Test:
 - AI Hub project metadata is updated with confirmed app ID, runtime URL, and builder URL.
 - `database/130_verify_afma_catch_monitor.sql` reports all `AFMA_CM_%` objects valid, the video-intake table/package valid, and the five selectable supplied cases with their current evidence counts.
 - Page 4 stages an HTTPS URL only after both acknowledgements, lists it as `AWAITING_PROJECT_IMPORT`, excludes it from the scenario selector until clearance, and clears the URL on the authorised delete action while retaining audit metadata.
-- Page 4 stages a supported upload through `APEX_APPLICATION_TEMP_FILES`, records byte/mime/file metadata in AIDEMODB, rejects empty/oversized/unsupported files, and clears the BLOB on deletion.
+- Page 4 hashes and transfers a supported upload through `AFMA_CM_NATIVE_UPLOAD_ACTION`, records byte/mime/file/checksum metadata in AIDEMODB, rejects empty/oversized/unsupported files, exposes chunk progress without leaving the page, and clears both submission/media-object BLOBs on deletion.
 - Catch Monitor visibly labels `AI-assisted review — reviewer confirmation required`, `DEMO DATA`, source/region/context, annotation status, model/evidence version and media manifest.
 - The video selector changes source, description, reported comparison data and review queue together through server-generated checksum-protected page URLs.
 - Frozen reported data can be cloned as an amendment; the editable version provides audited entry for catch lines and wildlife interactions before it is re-frozen for review.
@@ -295,6 +295,9 @@ Captured from AIDEMODB workspace `AFMA` on 2026-09-28 for AI Hub task `caab-016`
 
 - Pre-change APEXlang Standard Export: `exports/apex/afma/101/20260928-before-caab-016-apexlang-standard-export/`
 - Post-verification APEXlang Standard Export: `exports/apex/afma/101/20260928-after-caab-016-apexlang-standard-export/`
+- Intake-clearance checkpoint: `exports/apex/afma/101/20260928-after-caab-016-video-intake-apexlang-standard-export/`
+- Current media-import/native-upload checkpoint: `exports/apex/afma/101/20260928-after-caab-016-media-import-apexlang-standard-export/`
 - The repository-safe copies exclude `workspace-components/credentials/**` and `workspace-components/generative-ai-services/**`.
 - Runtime verification as `DEMO_USER` observed page 4 with four event cards, two reported catch lines, three media cards, CAAB codes `37311078` and `37346004`, full Catch Monitor styling, a controlled Ajax validation response, and passing Home/Agent/Reports regressions.
-- Follow-up runtime verification on 2026-09-28 observed all five selector paths, per-video descriptions and queue counts, an empty pending-annotation queue for `CM-WA-001`, explicit non-grounded wording for `CM-QLD-001`, and passing Home/Agent/Reports regressions. No APEX component metadata changed in this follow-up; page 4 continues to call the source-controlled `AFMA_CM_PAGE_API`, so the existing post-change APEXlang export remains the current application-component checkpoint.
+- Follow-up runtime verification on 2026-09-28 observed all five selector paths, per-video descriptions and queue counts, an empty pending-annotation queue for `CM-WA-001`, explicit non-grounded wording for `CM-QLD-001`, and passing Home/Agent/Reports regressions.
+- Media-import verification on 2026-09-28 stored exact video-only BLOBs for Jake Unger and The Life of a Fisherman at the 30% prompt-review gate, with matching byte counts/SHA-256 values, zero events and zero model calls. A 193,091-byte native upload exercised the visible chunked browser path end to end, reached the same gate, and was then deleted; the test BLOB/media object were cleared and no import rows remained.
