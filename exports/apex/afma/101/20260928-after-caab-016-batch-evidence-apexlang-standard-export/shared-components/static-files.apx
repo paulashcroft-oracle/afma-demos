@@ -1,0 +1,54 @@
+file "benchmarks/afma-west-moore-clip-a.mp4" (
+    mimeType: video/mp4
+    charSet: utf-8
+)
+
+file "benchmarks/afma-west-moore-clip-b.mp4" (
+    mimeType: video/mp4
+    charSet: utf-8
+)
+
+file "benchmarks/afma-west-moore-clip-c.mp4" (
+    mimeType: video/mp4
+    charSet: utf-8
+)
+
+file "benchmarks/afma-west-moore-clip-d.mp4" (
+    mimeType: video/mp4
+    charSet: utf-8
+)
+
+file caab-agent.js (
+    mimeType: text/javascript
+    charSet: utf-8
+)
+
+file caab.css (
+    mimeType: text/css
+    charSet: utf-8
+)
+
+file "icons/app-icon-144-rounded.png" (
+    mimeType: image/png
+    charSet: utf-8
+)
+
+file "icons/app-icon-192.png" (
+    mimeType: image/png
+    charSet: utf-8
+)
+
+file "icons/app-icon-256-rounded.png" (
+    mimeType: image/png
+    charSet: utf-8
+)
+
+file "icons/app-icon-32.png" (
+    mimeType: image/png
+    charSet: utf-8
+)
+
+file "icons/app-icon-512.png" (
+    mimeType: image/png
+    charSet: utf-8
+)

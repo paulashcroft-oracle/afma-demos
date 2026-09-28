@@ -1,10 +1,10 @@
 # Catch Monitor prompt review register
 
-Status: **human approval required before the next prompt activation**
+Status: **v4 batch-counting contract approved for the controlled demo; every later change requires review**
 Prepared: 28 September 2026
 Executable sources: `database/116_add_afma_catch_monitor_prompt_governance.sql` and `database/135_create_afma_catch_monitor_video_ai_trial.sql`
 
-This register makes the current experimental prompt contracts reviewable. It does not approve them for production or autonomous publication. Until an in-app registry exists, any prompt change must update this document and the executable package together and must not be activated until Paul has reviewed the exact contract and benchmark diff.
+This register makes the current experimental prompt contracts reviewable. It does not approve them for production or autonomous publication. The in-app registry renders the exact system prompt, task prompt and JSON schema, records the named activation, and retains prior versions. Any prompt change must update this document and the executable package together and must not be activated until Paul has reviewed the exact contract and benchmark diff.
 
 ## Version status
 
@@ -14,8 +14,10 @@ This register makes the current experimental prompt contracts reviewable. It doe
 | `west-moore-caab-events-v2` | Experimental comparison only | Not approved; do not activate | Added hard bounds, unit rows and teaser/replay exclusion. Improved arithmetic but introduced evidence suppression. |
 | `west-moore-caab-events-v3` | Experimental comparison only | Not approved; do not activate | Added transcript context. Pro returned valid JSON and two correctly identified Chinamanfish but missed the third fish and excluded the reviewable preview by instruction. |
 | `catch-monitor-metadata-v1` | In-app governed public-demo contract | Previously approved for controlled demo use; not a production AFMA EM prompt | Proposes title, description, region, fishery and gear from uploaded video/audio. AFMA EM footage has no audio, so a reviewed vision/sensor-only successor is required before production use. It cannot create evidence events or compliance findings. |
+| `catch-monitor-evidence-v3` | Retained governed predecessor | Previously active for the controlled demo; superseded | Visual-only individual-event contract. It produced one full-video `mackerels` event with count 1 for a rapid pole-fishing source, showing that one-row-per-fish semantics were unsuitable for high-throughput footage. |
+| `catch-monitor-evidence-v4-batch-counting` | **ACTIVE** in the governed registry | Approved by explicit in-app action for the controlled demo | Adds `INDIVIDUAL`/`BATCH`, exact/minimum/range count basis, new-catch versus visible-accumulation scope, compact rapid-catch grouping, and deterministic range/scope validation. Every published row remains `NEEDS_REVIEW`. |
 
-No v4 prompt is proposed or active. Its wording will be drafted only after review of the desired depicted-event, evidence-linking and unique-catch semantics.
+V4 is a demo evidence proposal contract, not production authorisation. The runtime shows its exact immutable prompt and schema and permits re-analysis of an unreviewed completed submission under the newer active contract.
 
 ## Production AFMA EM prompt invariant
 
@@ -29,6 +31,32 @@ AFMA's [September 2026 privacy-impact summary](https://www.afma.gov.au/sites/def
 - keep the West Moore audio/transcript behaviour explicitly isolated as public-video benchmark history.
 
 The current executable metadata v1 and West Moore trial prompts are not being silently rewritten. Any successor will be shown verbatim with its schema and benchmark diff for Paul's approval before activation.
+
+## Evidence v4 exact prompt — active controlled demo contract
+
+System prompt:
+
+```text
+You are an evidence-first fisheries video analyst supporting an authorised AFMA reviewer. Use only visible frames and visible on-screen text in the attached video. Never use, infer, quote or rely on audio, speech, captions derived from speech, filename, URL, working title or submitter notes. Analyse high-throughput fishing as time-bounded batches; do not create one output row per fish when several fish of the same candidate taxon are caught in the same short interval. Count newly visible catch transitions and distinguish them from fish already accumulated on deck so the same fish are not repeatedly added to catch totals. Preserve edited previews, replays and possible duplicates as visible evidence and label their relationship instead of silently discarding them. Never make a compliance finding or infer quota, legal size, weight, retained/released status, injury, survival or post-release condition. Estimate length only when a visible scale or a defensible known-size reference is present in the same evidence. Species identities are candidates for deterministic CAAB matching and officer review. Do not invent a CAAB code. Your output is an advisory proposal, never a final finding.
+```
+
+Task prompt:
+
+```text
+Review the attached video from beginning to end using vision and visible on-screen text only.
+
+Return neutral editable source metadata and an events array. For ordinary isolated catches, create one INDIVIDUAL event. When several catches occur rapidly, create one BATCH event per candidate taxon and coherent time window, normally 10 to 60 seconds, instead of one row per fish. The count is the number of newly observed catch transitions in that window: fish visibly landed, brought aboard, removed from gear or clearly displayed as the immediate result of fishing. Do not recount fish that were already visible on deck in an earlier window.
+
+If a static or growing deck pile is visible but individual arrival transitions cannot be counted, create at most one VISIBLE_ACCUMULATION row per candidate taxon and coherent window. This is contextual inventory evidence, not a new-catch total. Use count_basis EXACT_VISIBLE only when every counted individual is clearly distinguishable; MINIMUM_VISIBLE when the number is a defensible lower bound and no upper bound is supportable; or ESTIMATED_RANGE when a point estimate and defensible lower/upper range are visually supportable. Use count_upper_bound 0 only for MINIMUM_VISIBLE. Keep event count values compact by grouping batches; do not emit hundreds of individual rows.
+
+Use CATCH only for catch or visible accumulation evidence. Use WILDLIFE for a visible non-catch animal, including a sighting or possible interaction. For edited footage, retain a preview, replay or possible duplicate as its own depicted-evidence row and link it using evidence_role, evidence_group_ref and possible_duplicate_of_event_index. Event indexes are one-based in array order; use 0 when there is no possible duplicate. Give start and end times covering the visible evidence, with 0 at the first attached frame. Use an empty common_name or scientific_name when identity is not visually supportable. Do not output a CAAB code. Set audio_used to false for every event.
+
+For size, set size_status to NOT_ESTIMABLE, length_value to 0 and length_unit to NONE unless a visible scale or defensible known reference supports a measurement. For disposition, report only an action visibly shown in the event window; otherwise UNKNOWN. For wildlife interaction, distinguish SIGHTING, POSSIBLE_INTERACTION, CONFIRMED_INTERACTION and INCONCLUSIVE conservatively. A catch event uses NOT_APPLICABLE. Confidence must express visual support and must not exceed 0.98.
+
+Return only JSON matching the supplied schema.
+```
+
+The exact JSON Schema is stored with the prompt contract and rendered verbatim in the app. Its material v4 additions are required `event_granularity`, `count_lower_bound`, `count_upper_bound`, `count_basis` and `count_scope` fields. Deterministic validation rejects inconsistent exact/minimum/range arithmetic, individual events with counts other than one, invalid wildlife/catch scopes, audio use, out-of-bounds times, unsupported CAAB codes and prohibited measurement/disposition claims. One narrow mechanical repair is permitted: when an individual `EXACT_VISIBLE` row has point count and lower bound 1 but the model incorrectly returns upper bound 0, the validator normalises upper bound to 1, appends the repair to the event uncertainty and retains the unmodified raw response for audit. All other arithmetic contradictions fail the segment.
 
 ## Metadata v1 exact contract — governed draft
 

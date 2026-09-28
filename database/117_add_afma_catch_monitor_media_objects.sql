@@ -32,7 +32,7 @@ begin
         source_video_id       varchar2(200 char),
         acquisition_method    varchar2(40 char) not null,
         acquisition_note      varchar2(2000 char),
-        audio_present_yn      varchar2(1 char) default 'N' not null,
+        audio_present_yn      varchar2(7 char) default 'N' not null,
         storage_region        varchar2(40 char) default 'ap-sydney-1' not null,
         retention_review_at   date not null,
         created_at            timestamp with local time zone default systimestamp not null,
@@ -47,6 +47,20 @@ begin
         constraint afma_cm_media_objects_ck_range check (source_start_second is null or source_end_second is null or source_end_second >= source_start_second)
       )
     ]';
+  end if;
+end;
+/
+
+declare
+  l_length number;
+begin
+  select char_length
+    into l_length
+    from user_tab_columns
+   where table_name = 'AFMA_CM_MEDIA_OBJECTS'
+     and column_name = 'AUDIO_PRESENT_YN';
+  if l_length < 7 then
+    execute immediate 'alter table afma_cm_media_objects modify audio_present_yn varchar2(7 char)';
   end if;
 end;
 /

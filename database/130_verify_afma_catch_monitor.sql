@@ -119,6 +119,11 @@ select o.start_second,
        o.ai_spcode,
        t.scientific_name,
        o.ai_count,
+       o.ai_count_lower_bound,
+       o.ai_count_upper_bound,
+       o.ai_count_basis,
+       o.ai_count_scope,
+       o.ai_event_granularity,
        o.ai_confidence,
        o.ai_catch_state,
        o.ai_interaction_class,
@@ -221,5 +226,37 @@ select prompt_key,
        activated_by
   from afma_cm_prompt_contracts
  order by prompt_key, created_at desc;
+
+select count(*) invalid_batch_count_contracts
+  from afma_cm_observations o
+ where (o.ai_event_granularity = 'INDIVIDUAL' and o.ai_count <> 1)
+    or (o.ai_count_basis = 'EXACT_VISIBLE'
+        and (o.ai_count_lower_bound <> o.ai_count
+             or o.ai_count_upper_bound <> o.ai_count))
+    or (o.ai_count_basis = 'MINIMUM_VISIBLE'
+        and (o.ai_count_lower_bound <> o.ai_count
+             or o.ai_count_upper_bound is not null))
+    or (o.ai_count_basis = 'ESTIMATED_RANGE'
+        and (o.ai_count_upper_bound < o.ai_count_lower_bound
+             or o.ai_count not between o.ai_count_lower_bound and o.ai_count_upper_bound))
+    or (o.observation_type = 'WILDLIFE' and o.ai_count_scope <> 'WILDLIFE')
+    or (o.observation_type = 'CATCH' and o.ai_count_scope = 'WILDLIFE');
+
+select count(*) model_published_non_review_rows
+  from afma_cm_observations o
+  join afma_cm_analysis_runs ar on ar.analysis_run_id = o.analysis_run_id
+ where ar.analysis_mode = 'APEX_GEMINI_PRO'
+   and o.reviewer_status <> 'NEEDS_REVIEW';
+
+select vs.submission_ref,
+       count(*) segment_count,
+       min(mo.source_start_second) first_source_second,
+       max(mo.source_end_second) last_source_second,
+       sum(mo.source_end_second - mo.source_start_second) covered_seconds
+  from afma_cm_video_submissions vs
+  join afma_cm_media_objects mo on mo.submission_id = vs.submission_id
+ where mo.object_key like 'ANALYSIS_SEG_%'
+ group by vs.submission_ref
+ order by vs.submission_ref;
 
 prompt AFMA 130 complete
