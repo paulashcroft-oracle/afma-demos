@@ -16,7 +16,7 @@ The selector changes the source video, description, synthetic/received compariso
 | `CM-QLD-002` — [ABC Great Barrier Reef handline](https://www.abc.net.au/news/2024-06-07/sharks-take-handline-fishermens-catch/103948396) | One hooked reef fish and sharks sighting/contacting or taking the catch. Useful for catch plus depredation; fish and shark species remain unresolved. | Three human-curated, time-coded demo events grounded in the reviewed clip; not live model output. |
 | `CM-QLD-003` — [AMCS Mackay turtle gillnet](https://www.marineconservation.org.au/marine-conservationists-uncover-footage-of-turtle-death-traps-in-our-reef/) | Multiple marine turtles visibly entangled in gillnet. The publisher reports at least seven animals. | One source-described aggregate/minimum; species-level and individual time coding remain pending. |
 | `CM-QLD-004` — [ABC Bundaberg prawn trawler](https://www.abc.net.au/news/2024-03-02/video-sharks-dolphins-maul-prawn-trawler-catch/103534252) | A dolphin and multiple sharks around a trawler, including sharks contacting the caught mass. Useful as a crowded interaction/counting stress test. | Three human-curated, time-coded demo events; minimum counts and unresolved species are explicit. |
-| `CM-WA-001` — [West Moore Island episode](https://www.youtube.com/watch?v=b4KcVC11KVI) | Eight reviewed catches: Common Coral Trout x1, Chinamanfish x3, Red Emperor x1 and Spanish Mackerel x3. No wildlife interaction is evidenced. | Eight human-curated, time-coded events form the benchmark. They are not live model output. |
+| `CM-WA-001` — [West Moore Island episode](https://www.youtube.com/watch?v=b4KcVC11KVI) | Nine unique fish: Common Coral Trout x1, Chinamanfish x4, Red Emperor x1 and Spanish Mackerel x3. The edited source also contains a 07:09 Coming Up preview of the first Spanish Mackerel landing. No wildlife interaction is evidenced. | Ten time-coded depicted-catch observations: nine unique fish plus the linked preview. All remain reviewer-visible; the preview is labelled as a possible duplicate rather than silently discarded. |
 | `CM-QLD-001` — original workflow fixture | The original public coral-trout-themed source used to exercise the first UI slice. | Explicitly labelled synthetic UI fixture; its four deterministic events are not claims about the video. |
 
 Each selected case displays its region, fishing context, duration where known, source link, rights status, annotation/evidence status and a plain-language description. Source narration may inform a note, but species-level CAAB identity remains unresolved unless the visual evidence and reference material support that precision. The current “AI” queue is therefore a deterministic evaluation fixture assembled from manual/source review, not the output of a connected computer-vision model.
@@ -24,6 +24,8 @@ Each selected case displays its region, fishing context, duration where known, s
 The first APEX-native Gemini experiment is documented in [Catch Monitor video-analysis options and benchmark](catch-monitor-video-analysis-options.md). Raw trial results remain in `AFMA_CM_AI_TRIALS`, isolated from `AFMA_CM_OBSERVATIONS`; no model response is automatically published to the review queue.
 
 Current model decision: use OCI Gemini 2.5 Pro in Chicago as the demonstrator's default video-analysis model. Flash comparison results remain recorded, but Flash is deferred unless later volume, latency or cost warrants a second tier.
+
+Edited-source policy for this public demo: retain every visibly depicted catch as a reviewable observation, tag previews/replays explicitly, and link matching observations into an evidence group. The West Moore 07:09 preview is linked to the full 12:28–14:20 Spanish Mackerel sequence. This deliberately exposes the deduplication anomaly to viewers. Production AFMA recording-device footage is expected to be continuous and should not contain editorial Coming Up segments, but the provenance fields remain useful for repeated views, camera overlap and genuine duplicate detections.
 
 ## Decision requested
 
@@ -263,7 +265,7 @@ Required behaviour:
 
 ### FR-2 — Evidence-first intake and analysis
 
-Require review context before analysis: fishery, gear/method, broad region, date, camera view, and rights/consent status. Permit `unknown` when evidence is inadequate. Create time-bounded observations with thumbnails, clip link, camera/view, and available GPS/sensor context. A detection is never a record until a reviewer decides. Support duplicate suppression across adjacent frames plus merge/split.
+Require review context before analysis: fishery, gear/method, broad region, date, camera view, source profile, and rights/consent status. Permit `unknown` when evidence is inadequate. Create time-bounded observations with thumbnails, clip link, camera/view, and available GPS/sensor context. A detection is never a record until a reviewer decides. Preserve every depicted catch candidate, link repeated/overlapping evidence rather than silently deleting it, and support reviewer-controlled merge/split. Edited public demo footage must label previews/replays; continuous AFMA device footage should normally use primary evidence only.
 
 ### FR-3 — Catch identification and count
 
@@ -290,6 +292,14 @@ The guidance drawer provides AFMA reviewer sources for species ID, interaction d
 ### FR-6 — Audit, privacy, and retention
 
 Record immutable decision history, model version, confidence, evidence hashes, and reviewer identity. Use least-privilege roles, encryption in transit/at rest, access logging, working-area/active-fishing capture only, and no audio. Default to a six-month footage deletion baseline aligned to AFMA’s PIA unless a stricter approved demo policy is chosen. Internal analysis/reference use follows the recorded rights status; custom model training requires an explicit recorded data-use decision.
+
+### FR-7 — Prompt governance and human approval
+
+Treat system prompts, task prompts, response schemas, CAAB candidate context and deterministic validation rules as governed application configuration. Every version must preserve its exact text, author, rationale, model/service, test set, comparison results, approval status, approver, activation time and rollback target. The lifecycle is `DRAFT → APPROVED → ACTIVE → RETIRED`; only an explicitly approved version may become active. Activation creates a new immutable version and audit event rather than overwriting prompt text.
+
+The application shall provide an authorised prompt-review page showing the exact rendered system/task prompts and response schema before approval, including a highlighted semantic diff from the active version and replay results against the benchmark set. A prompt change that adds exclusion, deduplication, compliance, species or counting behaviour requires human review even when its JSON schema is unchanged. The West Moore regression demonstrates why: the v2/v3 teaser-exclusion instruction suppressed a correctly detected third Chinamanfish and reviewable preview that Pro v1 had identified.
+
+Until that page exists, no new prompt version may be activated without Paul reviewing the exact prompt contract in [Catch Monitor prompt review register](catch-monitor-prompt-review.md). The PL/SQL package remains the executable source; the register and package must change together in the same reviewed commit.
 
 ## Proposed UI
 

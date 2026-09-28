@@ -28,7 +28,9 @@ declare
     p_taxon_text         in varchar2,
     p_spcode             in varchar2,
     p_confidence         in number,
-    p_evidence_text      in varchar2
+    p_evidence_text      in varchar2,
+    p_evidence_role      in varchar2 default 'PRIMARY',
+    p_evidence_group_ref in varchar2 default null
   ) is
   begin
     merge into afma_cm_observations target
@@ -49,15 +51,19 @@ declare
        target.ai_confidence = p_confidence,
        target.ai_catch_state = 'UNKNOWN',
        target.ai_interaction_class = 'NOT_APPLICABLE',
+       target.evidence_role = p_evidence_role,
+       target.evidence_group_ref = p_evidence_group_ref,
        target.evidence_text = p_evidence_text
      when not matched then insert (
        analysis_run_id, observation_type, start_second, end_second,
        ai_taxon_text, ai_spcode, ai_count, ai_confidence,
-       ai_catch_state, ai_interaction_class, evidence_text
+       ai_catch_state, ai_interaction_class, evidence_role,
+       evidence_group_ref, evidence_text
      ) values (
        p_run_id, 'CATCH', p_start_second, p_end_second,
        p_taxon_text, p_spcode, 1, p_confidence,
-       'UNKNOWN', 'NOT_APPLICABLE', p_evidence_text
+       'UNKNOWN', 'NOT_APPLICABLE', p_evidence_role,
+       p_evidence_group_ref, p_evidence_text
      );
   end upsert_observation;
 
@@ -305,13 +311,13 @@ begin
   create_case(
     'CM-WA-001', 'West Moore Island — multi-species catch review',
     'Charter / recreational line fishing', 'West Moore Island, Western Australia',
-    'Long-form fishing episode with eight human-reviewed catch events: Common Coral Trout x1, Chinamanfish x3, Red Emperor x1 and Spanish Mackerel x3. No wildlife interaction is evidenced in this source.',
+    'Long-form fishing episode with ten reviewable depicted-catch observations: nine unique fish plus one edited Coming Up preview of a later Spanish Mackerel landing. The preview is retained and explicitly linked so the deduplication anomaly is visible; no wildlife interaction is evidenced.',
     'West Moore Island fishing episode', 'YouTube',
     'https://www.youtube.com/watch?v=b4KcVC11KVI',
     'https://www.youtube-nocookie.com/embed/b4KcVC11KVI',
     'Original uploader via YouTube', 1155,
-    'human-ground-truth-v1', 'AFMA-CM-WEST-MOORE-GROUND-TRUTH-2026.09',
-    'Eight human-curated, time-coded catch observations grounded in reviewed footage and narration. They are the benchmark for model trials, not live model output.'
+    'human-ground-truth-v2', 'AFMA-CM-WEST-MOORE-GROUND-TRUTH-V2-2026.09',
+    'Ten human-curated depicted-catch observations represent nine unique fish plus one edited preview linked to the later full landing. Continuous AFMA device footage is not expected to contain editorial previews.'
   );
 
   select t.trip_id, ar.analysis_run_id
@@ -338,15 +344,29 @@ begin
   );
   upsert_observation(
     l_west_run_id, 387, 428, 'Chinamanfish', l_chinaman_spcode, .96,
-    'First of two distinct Chinamanfish visible during the double hook-up. Both fish are shown together; this event records one individual so the later display is not counted again.'
+    'First of two Chinamanfish simultaneously visible on the multi-hook rig. It is one of three distinct Chinamanfish depicted in this catch sequence.',
+    p_evidence_group_ref => 'WM-CHINAMAN-0627'
   );
   upsert_observation(
     l_west_run_id, 402, 428, 'Chinamanfish', l_chinaman_spcode, .96,
-    'Second of two distinct Chinamanfish visible during the double hook-up. The simultaneous two-fish view supports a second individual rather than a replay of the first.'
+    'Second Chinamanfish simultaneously visible on the same multi-hook rig. The two-fish frame supports a separate individual rather than a replay of the first.',
+    p_evidence_group_ref => 'WM-CHINAMAN-0627'
+  );
+  upsert_observation(
+    l_west_run_id, 418, 427, 'Chinamanfish', l_chinaman_spcode, .98,
+    'A third, separate Chinamanfish is held by a different angler after the camera pans from the two-fish rig. Visual continuity and the “Chinaman love-in” narration support three individuals in this sequence.',
+    p_evidence_group_ref => 'WM-CHINAMAN-0627'
+  );
+  upsert_observation(
+    l_west_run_id, 429, 436, 'Spanish Mackerel', l_mackerel_spcode, .99,
+    'Edited-source anomaly: a Coming Up preview visibly depicts a Spanish Mackerel landing. Gemini Pro identified the species, the preview context and its exact 07:09–07:16 window. Full-video frame comparison links it to the later 12:28–14:20 landing; it remains reviewable rather than being silently discarded. Continuous AFMA device footage is not expected to contain editorial previews.',
+    p_evidence_role => 'PREVIEW_OR_REPLAY',
+    p_evidence_group_ref => 'WM-MACKEREL-1228'
   );
   upsert_observation(
     l_west_run_id, 748, 860, 'Spanish Mackerel', l_mackerel_spcode, .99,
-    'One Spanish Mackerel is fought, brought alongside, landed and displayed. Narration identifies the species; spoken weight estimates are not treated as measurements.'
+    'One Spanish Mackerel is fought, brought alongside, landed and displayed. This is the full sequence previewed at 07:09; matching landing, holder and deck frames link the two observations. Narration identifies the species; spoken weight estimates are not measurements.',
+    p_evidence_group_ref => 'WM-MACKEREL-1228'
   );
   upsert_observation(
     l_west_run_id, 904, 990, 'Spanish Mackerel', l_mackerel_spcode, .99,
@@ -361,14 +381,14 @@ begin
     trip_id, entity_type, entity_id, action_name, detail_text
   )
   select l_west_trip_id, 'TRIP', l_west_trip_id,
-         'WEST_MOORE_GROUND_TRUTH_PUBLISHED',
-         'Eight human-reviewed catch events published as the benchmark: Common Coral Trout 1, Chinamanfish 3, Red Emperor 1, Spanish Mackerel 3; no wildlife interaction claimed.'
+         'WEST_MOORE_GROUND_TRUTH_V2_PUBLISHED',
+         'Ten depicted-catch observations published: nine unique fish (Common Coral Trout 1, Chinamanfish 4, Red Emperor 1, Spanish Mackerel 3) plus one linked Coming Up preview of the first Spanish Mackerel; no wildlife interaction claimed.'
     from dual
    where not exists (
      select 1
        from afma_cm_audit_events
       where trip_id = l_west_trip_id
-        and action_name = 'WEST_MOORE_GROUND_TRUTH_PUBLISHED'
+        and action_name = 'WEST_MOORE_GROUND_TRUTH_V2_PUBLISHED'
    );
 
   commit;

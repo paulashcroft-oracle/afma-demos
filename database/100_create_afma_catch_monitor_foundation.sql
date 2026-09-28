@@ -206,6 +206,8 @@ begin
       ai_confidence        number,
       ai_catch_state       varchar2(30 char),
       ai_interaction_class varchar2(40 char),
+      evidence_role        varchar2(30 char) default 'PRIMARY' not null,
+      evidence_group_ref   varchar2(100 char),
       evidence_text        varchar2(1000 char),
       reviewer_status      varchar2(30 char) default 'NEEDS_REVIEW' not null,
       reviewed_spcode      varchar2(20 char),
@@ -219,6 +221,7 @@ begin
       constraint afma_cm_observations_fk_ai_caab foreign key (ai_spcode) references csiro_caab_taxa (spcode),
       constraint afma_cm_observations_fk_review_caab foreign key (reviewed_spcode) references csiro_caab_taxa (spcode),
       constraint afma_cm_observations_ck_type check (observation_type in ('CATCH','WILDLIFE')),
+      constraint afma_cm_obs_ck_evidence_role check (evidence_role in ('PRIMARY','PREVIEW_OR_REPLAY')),
       constraint afma_cm_observations_ck_review check (reviewer_status in ('NEEDS_REVIEW','CONFIRMED','CORRECTED','REJECTED','ESCALATED')),
       constraint afma_cm_observations_ck_interaction check (ai_interaction_class in ('NOT_APPLICABLE','SIGHTING','POSSIBLE_INTERACTION','CONFIRMED_INTERACTION','INCONCLUSIVE')),
       constraint afma_cm_observations_ck_r_interaction check (reviewed_interaction_class is null or reviewed_interaction_class in ('NOT_APPLICABLE','SIGHTING','POSSIBLE_INTERACTION','CONFIRMED_INTERACTION','INCONCLUSIVE'))

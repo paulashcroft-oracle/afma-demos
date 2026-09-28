@@ -150,6 +150,7 @@ create or replace package body afma_cm_page_api as
       when l_model_version = 'annotation-pending' then 'Annotation pending'
       when l_model_version = 'source-described-minimum-v1' then 'Source-described summary'
       when l_model_version = 'synthetic-ui-fixture-v1' then 'Synthetic UI fixture'
+      when l_model_version like 'human-ground-truth%' then 'Human-reviewed ground truth'
       when l_model_version like 'manual-video-annotation%' then 'Time-coded manual annotation'
       else 'Demo evidence run'
     end;
@@ -216,6 +217,12 @@ create or replace package body afma_cm_page_api as
        order by o.start_second, o.observation_id
     ) loop
       add_line(l_html, '<article class="cm-event ' || case when o.observation_type = 'WILDLIFE' then 'cm-event-wildlife' end || '" data-observation-id="' || o.observation_id || '"><div class="cm-event__top"><div><h3>' || fmt_second(o.start_second) || ' · ' || h(replace(initcap(o.observation_type), '_', ' ')) || ' · ' || h(o.display_name) || '</h3><div><span class="cm-spcode">' || h(coalesce(o.taxon_spcode, 'CAAB unresolved')) || '</span> · confidence ' || to_char(o.ai_confidence * 100, 'FM990') || '% · proposed count ' || h(to_char(o.ai_count)) || '</div></div><span class="cm-badge ' || badge_class(o.reviewer_status) || '">' || h(o.reviewer_status) || '</span></div>');
+      if o.evidence_role = 'PREVIEW_OR_REPLAY' or o.evidence_group_ref is not null then
+        add_line(l_html, '<div class="cm-meta">' ||
+          case when o.evidence_role = 'PREVIEW_OR_REPLAY' then '<span class="cm-badge cm-badge-warn">Edited preview / possible duplicate</span>' end ||
+          case when o.evidence_group_ref is not null then '<span class="cm-badge cm-badge-neutral">Evidence group ' || h(o.evidence_group_ref) || '</span>' end ||
+          '</div>');
+      end if;
       add_line(l_html, '<p>' || h(o.evidence_text) || '</p>');
       if o.reviewed_by is not null then
         add_line(l_html, '<p><strong>Reviewer:</strong> ' || h(o.reviewed_by) || ' · ' || h(o.reviewed_interaction_class) || case when o.reviewer_notes is not null then ' · ' || h(o.reviewer_notes) end || '</p>');

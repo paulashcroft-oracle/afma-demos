@@ -12,7 +12,7 @@ Use this staged path:
 
 1. APEX owns upload/intake, CAAB candidate context, job state, model/prompt provenance, raw response, validation, reviewer decisions and audit.
 2. Split long videos into bounded, overlapping clips and run Gemini 2.5 Pro for candidate events. Supply an independent transcript where narration can help resolve identity or deduplication.
-3. Apply deterministic gates before an event can be proposed: timestamps within clip bounds, count/detail/summary agreement, CAAB code validity, replay/teaser exclusion, duplicate/overlap checks, out-of-scope disposition/measurement claims and required evidence text.
+3. Apply deterministic gates before an event can be proposed: timestamps within clip bounds, count/detail/summary agreement, CAAB code validity, preview/replay detection and provenance, duplicate/overlap linking, out-of-scope disposition/measurement claims and required evidence text. Preserve depicted candidates for reviewer adjudication rather than silently deleting them.
 4. Reject invalid outputs and retry Pro idempotently with the same immutable clip/prompt context. Escalate persistent failures or ambiguous species to the reviewer; do not silently switch models or coerce the answer.
 5. Publish validated candidates into `AFMA_CM_OBSERVATIONS` only as `NEEDS_REVIEW`. An authorised AFMA reviewer remains responsible for confirmation/correction/rejection/escalation.
 6. Benchmark wildlife-interaction and crowded-deck videos before deciding whether a custom A10 detector/tracker is necessary.
@@ -24,7 +24,7 @@ An asynchronous job boundary should be designed now. One clip call took up to 55
 ### Test arrangement
 
 - Source: West Moore Island public episode, 19:15.
-- Human ground truth: eight unique fish — Common Coral Trout 1, Chinamanfish 3, Red Emperor 1, Spanish Mackerel 3; no wildlife interaction.
+- Revised human ground truth: nine unique fish — Common Coral Trout 1, Chinamanfish 4, Red Emperor 1, Spanish Mackerel 3; no wildlife interaction. The edited episode also depicts the first Spanish Mackerel in a 07:09 Coming Up preview, producing ten reviewable depicted-catch observations before deduplication.
 - Model context: the four known CAAB candidates and exact `SPCODE` values were supplied. This intentionally tests the intended CAAB-constrained workflow rather than open-world species discovery.
 - Four MP4 clips (13–32 MB, 90–240 seconds, audio retained) were supplied as `APEX_AI` video attachments to workspace service `google_gemini_2_5_flash` in `us-chicago-1`.
 - Flash responses used a strict JSON schema and were stored in `AFMA_CM_AI_TRIALS`, not in the reviewer queue.
@@ -35,10 +35,10 @@ An asynchronous job boundary should be designed now. One clip call took up to 55
 | Trial | Ground truth | Model result | Elapsed | Assessment |
 | --- | --- | --- | ---: | --- |
 | Flash, source 02:20–04:45 | Coral Trout 1; Chinamanfish 1; Red Emperor 1 | Exactly three events; all species and CAAB codes correct; usable timestamps | 29.27 s | Strong result. It correctly followed the narrator's correction from “red emperor” to Chinamanfish. Confidence `1.0` was over-certain. |
-| Flash, source 06:00–07:30 | Chinamanfish 2 in a double hook-up | Aggregate `unique_catch_total` said 2, but detail contained duplicated coral-trout events plus a Spanish mackerel outside the clip; Chinamanfish identification failed | 24.49 s | Failed. Detail, summary and clip bounds contradicted one another. |
+| Flash, source 06:00–07:30 | Chinamanfish 3 plus one depicted Spanish Mackerel preview | Aggregate `unique_catch_total` said 2, but detail contained duplicated coral-trout events plus a Spanish Mackerel outside the clip bounds; all Chinamanfish identification failed | 24.49 s | Failed. Detail, summary and clip bounds contradicted one another, and the result missed the three-fish sequence. |
 | Flash, source 12:00–14:45 | Spanish Mackerel 1 | Count and CAAB species correct | 27.48 s | Partly successful. Event end time exceeded the 165-second clip boundary. |
 | Flash, source 14:40–18:40 | Spanish Mackerel 2 | Count and CAAB species correct | 33.12 s | Partly successful. Time windows extended outside the clip and did not cleanly isolate the two landings. |
-| Pro adjudication, source 06:00–07:30 | Chinamanfish 2 | Recognised Chinamanfish and recognised a later “Coming Up” teaser, but counted the two fish, a later display and the teaser as four catches | 37.39 s | Better taxonomy, failed unique-individual/replay exclusion. Pro alone does not remove the need for validators and review. |
+| Pro adjudication, source 06:00–07:30 | Chinamanfish 3 plus one depicted Spanish Mackerel preview | Returned two Chinamanfish on one rig, a third separate Chinamanfish held by another angler, and the Spanish Mackerel Coming Up preview with correct species and 06:45–07:16 windows | 37.39 s | Strong result. Subsequent frame-by-frame review corrected the original human label: Pro had accurately detected the third fish and explicitly recognised the teaser context. Its `1.0` confidence was still over-certain, and full-video evidence is required to link the teaser to the later landing. |
 
 ### Refinement comparison
 
@@ -46,16 +46,18 @@ Prompt v2 added one-row-per-individual rules, explicit teaser/replay exclusion, 
 
 | Trial | Result | Validator outcome | Meaning |
 | --- | --- | --- | --- |
-| Flash v2, double hook-up | Correctly excluded the teaser and returned two bounded fish rows, but identified both as Common Coral Trout | Structurally passed; new routing rule marks narration/species contradiction for adjudication | Prompting fixed count/dedup/timing, not the difficult species decision. |
-| Pro v2, double hook-up | Provider-side internal error | Failed trial retained for retry evidence | The app needs retries, idempotency and model fallback. |
-| Flash v3 + transcript, double hook-up | Provider-side internal error | Failed trial retained | Flash is not a dependable adjudicator for the ambiguous case. |
-| Pro v3 + transcript, double hook-up | Exactly two Chinamanfish, count 1 each, correct CAAB code, bounded 06:45–06:57 source window; teaser excluded | `PASS` | Transcript-assisted Pro resolved the strongest failure case without being given the answer. |
+| Flash v2, three-fish/preview sequence | Excluded the teaser and returned two bounded fish rows, but identified both as Common Coral Trout | Structurally passed; ground-truth failed | Prompting fixed arithmetic and timing but missed the third Chinamanfish, missed the reviewable preview and failed the difficult species decision. |
+| Pro v2, three-fish/preview sequence | Provider-side internal error | Failed trial retained for retry evidence | The app needs retries, idempotency and model fallback. |
+| Flash v3 + transcript, three-fish/preview sequence | Provider-side internal error | Failed trial retained | Flash is not a dependable adjudicator for the ambiguous case. |
+| Pro v3 + transcript, three-fish/preview sequence | Two Chinamanfish, count 1 each, correct CAAB code, bounded 06:45–06:57 source window; third fish missed and preview excluded by instruction | Structural validator `PASS`; revised ground-truth `FAIL` | The over-aggressive exclusion/dedup prompt degraded the stronger Pro v1 result. Schema validity cannot detect a missing individual, and teaser evidence should be tagged and linked rather than suppressed. |
 | Flash v2, late two-mackerel sequence | Correct species/count, but second event ended 100 seconds outside the clip and asserted release | `REJECTED` | Fast discovery remains useful; semantic validator prevented publication. |
 | Pro v2, late two-mackerel sequence | Exactly two Spanish Mackerel with bounded source windows about 15:04–16:32 and 16:38–18:11 | `PASS` | Refined Pro was materially more temporally reliable on this clip. |
 
-The selected demo routing policy is: **Gemini 2.5 Pro plus transcript where useful → deterministic validator → AFMA reviewer**. Invalid results are retried idempotently, then escalated. A response can be structurally valid yet semantically wrong, so out-of-scope size/weight/quota/disposition claims are rejected and narration/species contradictions remain visible to the reviewer. Flash comparison trials remain in the evidence record but are not the current runtime path.
+The selected demo routing policy is: **Gemini 2.5 Pro plus transcript where useful → deterministic validator → AFMA reviewer**. Invalid results are retried idempotently, then escalated. A response can be structurally valid yet semantically wrong, so out-of-scope size/weight/quota/disposition claims are rejected and narration/species contradictions remain visible to the reviewer. Depicted previews/replays are retained with `PREVIEW_OR_REPLAY` provenance and linked to matching primary evidence; they are not silently removed. Flash comparison trials remain in the evidence record but are not the current runtime path.
 
-Across the four Flash clips, the aggregate `unique_catch_total` happened to sum to the correct eight, and six of the eight ground-truth fish received the correct species in the usable event interpretation. Only one of four clips returned internally reliable event timing/detail. This is promising for candidate discovery, not sufficient for automatic catch logging or compliance use.
+No further prompt version is to be activated without human review of its exact system prompt, task prompt, response schema and benchmark diff. The current contracts and their status are recorded in [Catch Monitor prompt review register](catch-monitor-prompt-review.md); the planned in-app registry will enforce `DRAFT → APPROVED → ACTIVE → RETIRED` with immutable audit and rollback.
+
+Across the four Flash clips, the aggregate `unique_catch_total` summed to eight against the revised nine-unique-fish ground truth, and six of the nine fish received the correct species in the usable event interpretation. Only one of four clips returned internally reliable event timing/detail. This is promising for candidate discovery, not sufficient for automatic catch logging or compliance use.
 
 ### What the test establishes
 
@@ -63,7 +65,7 @@ Across the four Flash clips, the aggregate `unique_catch_total` happened to sum 
 - Audio is valuable. The first clip result used spoken correction to distinguish Chinamanfish from Red Emperor.
 - JSON schema conformance does not guarantee semantic consistency. The model can return out-of-range times, duplicate displays, inconsistent totals and overconfident scores.
 - Short clips are necessary for current OCI Gemini payload limits and are beneficial for localisation, but clip boundaries/overlaps create their own duplicate-count risk.
-- A teaser/title-card/replay classifier and deterministic temporal validator are required before model proposals reach reviewers.
+- Preview/title-card/replay detection, evidence grouping and deterministic temporal validation are required before model proposals reach reviewers. The revised policy preserves those depicted observations and explains the likely duplicate; production AFMA device footage should not normally contain editorial teasers.
 
 Replayable trial assets:
 

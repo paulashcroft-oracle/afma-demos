@@ -113,6 +113,8 @@ select o.start_second,
        o.ai_confidence,
        o.ai_catch_state,
        o.ai_interaction_class,
+       o.evidence_role,
+       o.evidence_group_ref,
        o.reviewer_status
   from afma_cm_observations o
   join afma_cm_analysis_runs ar on ar.analysis_run_id = o.analysis_run_id
