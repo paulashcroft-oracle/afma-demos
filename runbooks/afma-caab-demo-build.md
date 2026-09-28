@@ -42,7 +42,8 @@ Run these scripts in the `AFMA` APEX workspace SQL Commands session or as the `A
 9. `database/100_create_afma_catch_monitor_foundation.sql`
 10. `database/110_create_afma_catch_monitor_api.sql`
 11. `database/120_create_afma_catch_monitor_page_api.sql`
-12. `database/130_verify_afma_catch_monitor.sql`
+12. `database/125_seed_afma_catch_monitor_video_library.sql`
+13. `database/130_verify_afma_catch_monitor.sql`
 
 Numbered SQL is the canonical source only for database/data evolution: tables, views, packages, report views, reference/config rows, and explicit data loads. APEX pages, navigation, feedback UI, page processes, AI Configs, Web Credential metadata, and application/static-file behavior are owned by APEXlang/application source. Legacy mixed scripts `050`, `080`, `085_enable`, and `090` are not retained as canonical install scripts.
 
@@ -195,8 +196,10 @@ Minimum checks before moving the build tasks to Test:
 - `AFMA_AI_HUB_FORWARDER`, `AI_HUB_FEEDBACK_FORWARDS`, and `AI_HUB_FEEDBACK_CANDIDATES_V` are valid.
 - APEX Web Credential metadata `AI_HUB_AFMA_FEEDBACK_API` exists in the live workspace or APEX application/source evidence; the raw key is not stored in the repository.
 - AI Hub project metadata is updated with confirmed app ID, runtime URL, and builder URL.
-- `database/130_verify_afma_catch_monitor.sql` reports all `AFMA_CM_%` objects valid, trip `CM-QLD-001`, one frozen reported version, two reported catch lines, four observations and three governed media records.
-- Catch Monitor visibly labels `AI-assisted review — reviewer confirmation required`, `DEMO DATA`, `SIMULATED_DEMO`, model version and media manifest.
+- `database/130_verify_afma_catch_monitor.sql` reports all `AFMA_CM_%` objects valid and five selectable cases: `CM-QLD-002` (3 evidence events), `CM-QLD-003` (1 source-described aggregate), `CM-QLD-004` (3 events), `CM-WA-001` (0 pending-annotation events), and `CM-QLD-001` (4 explicitly synthetic fixture events).
+- Catch Monitor visibly labels `AI-assisted review — reviewer confirmation required`, `DEMO DATA`, source/region/context, annotation status, model/evidence version and media manifest.
+- The video selector changes source, description, reported comparison data and review queue together through server-generated checksum-protected page URLs.
+- Frozen reported data can be cloned as an amendment; the editable version provides audited entry for catch lines and wildlife interactions before it is re-frozen for review.
 - The invalid-observation Ajax guard returns a controlled `ORA-20008` JSON response without mutating data, confirming the page/process/package boundary.
 - Existing Home, CSIRO CAAB Agent and Reports pages still render without an APEX or database error after Catch Monitor deployment.
 
@@ -283,3 +286,4 @@ Captured from AIDEMODB workspace `AFMA` on 2026-09-28 for AI Hub task `caab-016`
 - Post-verification APEXlang Standard Export: `exports/apex/afma/101/20260928-after-caab-016-apexlang-standard-export/`
 - The repository-safe copies exclude `workspace-components/credentials/**` and `workspace-components/generative-ai-services/**`.
 - Runtime verification as `DEMO_USER` observed page 4 with four event cards, two reported catch lines, three media cards, CAAB codes `37311078` and `37346004`, full Catch Monitor styling, a controlled Ajax validation response, and passing Home/Agent/Reports regressions.
+- Follow-up runtime verification on 2026-09-28 observed all five selector paths, per-video descriptions and queue counts, an empty pending-annotation queue for `CM-WA-001`, explicit non-grounded wording for `CM-QLD-001`, and passing Home/Agent/Reports regressions. No APEX component metadata changed in this follow-up; page 4 continues to call the source-controlled `AFMA_CM_PAGE_API`, so the existing post-change APEXlang export remains the current application-component checkpoint.

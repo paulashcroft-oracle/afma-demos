@@ -23,6 +23,15 @@ create or replace package afma_cm_api as
     p_reported_catch_id in number
   );
 
+  procedure save_reported_interaction(
+    p_trip_id             in number,
+    p_original_taxon_text in varchar2,
+    p_spcode              in varchar2 default null,
+    p_reported_count      in number default null,
+    p_interaction_kind    in varchar2 default null,
+    p_notes               in varchar2 default null
+  );
+
   procedure freeze_report(
     p_trip_id in number
   );
@@ -321,6 +330,18 @@ create or replace package body afma_cm_api as
     l_spcode varchar2(20) := trim(p_spcode);
     l_id number;
   begin
+    if upper(coalesce(p_catch_state, 'UNKNOWN')) like 'INTERACTION:%' then
+      afma_cm_api.save_reported_interaction(
+        p_trip_id             => p_trip_id,
+        p_original_taxon_text => p_original_taxon_text,
+        p_spcode              => p_spcode,
+        p_reported_count      => p_reported_count,
+        p_interaction_kind    => substr(p_catch_state, length('INTERACTION:') + 1),
+        p_notes               => p_notes
+      );
+      return;
+    end if;
+
     if trim(p_original_taxon_text) is null then
       raise_application_error(-20002, 'Reported species or taxon text is required.');
     end if;
@@ -362,6 +383,39 @@ create or replace package body afma_cm_api as
     end if;
     commit;
   end save_reported_catch;
+
+  procedure save_reported_interaction(
+    p_trip_id             in number,
+    p_original_taxon_text in varchar2,
+    p_spcode              in varchar2 default null,
+    p_reported_count      in number default null,
+    p_interaction_kind    in varchar2 default null,
+    p_notes               in varchar2 default null
+  ) is
+    l_report_id number;
+    l_operation_id number;
+    l_spcode varchar2(20) := trim(p_spcode);
+    l_id number;
+  begin
+    if trim(p_original_taxon_text) is null then
+      raise_application_error(-20011, 'Reported wildlife or taxon text is required.');
+    end if;
+    editable_context(p_trip_id, l_report_id, l_operation_id);
+    if l_spcode is null then
+      l_spcode := caab_spcode(p_original_taxon_text);
+    end if;
+
+    insert into afma_cm_reported_interactions (
+      operation_id, original_taxon_text, spcode, reported_count,
+      interaction_kind, notes
+    ) values (
+      l_operation_id, trim(p_original_taxon_text), l_spcode, p_reported_count,
+      trim(p_interaction_kind), p_notes
+    ) returning reported_interaction_id into l_id;
+
+    audit(p_trip_id, 'REPORTED_INTERACTION', l_id, 'CREATED', trim(p_original_taxon_text));
+    commit;
+  end save_reported_interaction;
 
   procedure delete_reported_catch(
     p_trip_id           in number,

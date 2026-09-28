@@ -27,7 +27,7 @@ This repository holds the replayable source assets for the AFMA APEX demo applic
 - Data profile: [`docs/caab-data-profile.md`](docs/caab-data-profile.md)
 - Fish-name research trail: [`docs/australian-fish-common-name-research.md`](docs/australian-fish-common-name-research.md)
 - Build runbook: [`runbooks/afma-caab-demo-build.md`](runbooks/afma-caab-demo-build.md)
-- Catch Monitor specification and AFMA/source research: [`docs/catch-monitor-specification.md`](docs/catch-monitor-specification.md)
+- Catch Monitor specification, selectable video set and AFMA/source research: [`docs/catch-monitor-specification.md`](docs/catch-monitor-specification.md)
 - Database scripts: [`database/`](database/)
 - Local data helpers: [`tools/`](tools/)
 - Current APEXlang Standard Export: [`exports/apex/afma/101/20260928-after-caab-016-apexlang-standard-export/`](exports/apex/afma/101/20260928-after-caab-016-apexlang-standard-export/)

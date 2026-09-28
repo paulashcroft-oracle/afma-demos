@@ -2,7 +2,7 @@ set define off
 
 -- Execution authority: read-only AFMA parsing schema verification through APEX SQL Commands or the schema owner.
 -- Target: AIDEMODB workspace/schema AFMA; verifies application 101 Catch Monitor dependencies.
-prompt AFMA 130 - Verify Catch Monitor database and demo scenario
+prompt AFMA 130 - Verify Catch Monitor database and selectable video scenarios
 
 select object_name,
        object_type,
@@ -77,5 +77,31 @@ select rights_status,
  where trip_id = (select trip_id from afma_cm_trips where trip_ref = 'CM-QLD-001')
  group by rights_status, coverage_status
  order by rights_status, coverage_status;
+
+select t.trip_ref,
+       m.title video_title,
+       m.source_system,
+       m.australian_region,
+       m.duration_seconds,
+       ar.model_version annotation_mode,
+       ar.media_manifest,
+       count(o.observation_id) evidence_events,
+       ar.run_notes
+  from afma_cm_trips t
+  join afma_cm_analysis_runs ar on ar.trip_id = t.trip_id
+  join afma_cm_media_assets m on m.media_asset_id = ar.media_asset_id
+  left join afma_cm_observations o on o.analysis_run_id = ar.analysis_run_id
+ where m.asset_role = 'SOURCE_VIDEO'
+ group by t.trip_ref, m.title, m.source_system, m.australian_region,
+          m.duration_seconds, ar.model_version, ar.media_manifest, ar.run_notes
+ order by case t.trip_ref
+            when 'CM-QLD-002' then 1
+            when 'CM-QLD-003' then 2
+            when 'CM-QLD-004' then 3
+            when 'CM-WA-001' then 4
+            when 'CM-QLD-001' then 5
+            else 9
+          end,
+          t.trip_ref;
 
 prompt AFMA 130 complete
