@@ -104,4 +104,31 @@ select t.trip_ref,
           end,
           t.trip_ref;
 
+select o.start_second,
+       o.end_second,
+       o.ai_taxon_text,
+       o.ai_spcode,
+       t.scientific_name,
+       o.ai_count,
+       o.ai_confidence,
+       o.ai_catch_state,
+       o.ai_interaction_class,
+       o.reviewer_status
+  from afma_cm_observations o
+  join afma_cm_analysis_runs ar on ar.analysis_run_id = o.analysis_run_id
+  left join csiro_caab_taxa t on t.spcode = o.ai_spcode
+ where ar.trip_id = (select trip_id from afma_cm_trips where trip_ref = 'CM-WA-001')
+ order by o.start_second, o.observation_id;
+
+select coalesce(t.common_name, t.scientific_name, o.ai_taxon_text) species_name,
+       o.ai_spcode,
+       sum(o.ai_count) proposed_count
+  from afma_cm_observations o
+  join afma_cm_analysis_runs ar on ar.analysis_run_id = o.analysis_run_id
+  left join csiro_caab_taxa t on t.spcode = o.ai_spcode
+ where ar.trip_id = (select trip_id from afma_cm_trips where trip_ref = 'CM-WA-001')
+   and o.observation_type = 'CATCH'
+ group by coalesce(t.common_name, t.scientific_name, o.ai_taxon_text), o.ai_spcode
+ order by species_name;
+
 prompt AFMA 130 complete

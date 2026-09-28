@@ -5,7 +5,12 @@ set define off
 prompt AFMA 125 - Seed selectable Catch Monitor video library
 
 declare
-  l_coral_spcode varchar2(20);
+  l_coral_spcode    varchar2(20);
+  l_chinaman_spcode varchar2(20);
+  l_emperor_spcode  varchar2(20);
+  l_mackerel_spcode varchar2(20);
+  l_west_trip_id    number;
+  l_west_run_id     number;
 
   function exact_spcode(p_scientific_name in varchar2) return varchar2 is
     l_spcode varchar2(20);
@@ -15,6 +20,46 @@ declare
      where lower(scientific_name) = lower(p_scientific_name);
     return l_spcode;
   end;
+
+  procedure upsert_observation(
+    p_run_id             in number,
+    p_start_second       in number,
+    p_end_second         in number,
+    p_taxon_text         in varchar2,
+    p_spcode             in varchar2,
+    p_confidence         in number,
+    p_evidence_text      in varchar2
+  ) is
+  begin
+    merge into afma_cm_observations target
+    using (
+      select p_run_id analysis_run_id,
+             p_start_second start_second,
+             p_end_second end_second
+        from dual
+    ) source
+       on (target.analysis_run_id = source.analysis_run_id
+       and target.observation_type = 'CATCH'
+       and target.start_second = source.start_second
+       and target.end_second = source.end_second)
+     when matched then update set
+       target.ai_taxon_text = p_taxon_text,
+       target.ai_spcode = p_spcode,
+       target.ai_count = 1,
+       target.ai_confidence = p_confidence,
+       target.ai_catch_state = 'UNKNOWN',
+       target.ai_interaction_class = 'NOT_APPLICABLE',
+       target.evidence_text = p_evidence_text
+     when not matched then insert (
+       analysis_run_id, observation_type, start_second, end_second,
+       ai_taxon_text, ai_spcode, ai_count, ai_confidence,
+       ai_catch_state, ai_interaction_class, evidence_text
+     ) values (
+       p_run_id, 'CATCH', p_start_second, p_end_second,
+       p_taxon_text, p_spcode, 1, p_confidence,
+       'UNKNOWN', 'NOT_APPLICABLE', p_evidence_text
+     );
+  end upsert_observation;
 
   procedure create_case(
     p_trip_ref          in varchar2,
@@ -205,6 +250,9 @@ declare
 
 begin
   l_coral_spcode := exact_spcode('Plectropomus leopardus');
+  l_chinaman_spcode := exact_spcode('Symphorus nematophorus');
+  l_emperor_spcode := exact_spcode('Lutjanus sebae');
+  l_mackerel_spcode := exact_spcode('Scomberomorus commerson');
 
   update afma_cm_trips
      set fishery_name = 'Synthetic workflow fixture — UI controls only',
@@ -255,16 +303,73 @@ begin
   );
 
   create_case(
-    'CM-WA-001', 'West Moore Island — multi-species candidate',
+    'CM-WA-001', 'West Moore Island — multi-species catch review',
     'Charter / recreational line fishing', 'West Moore Island, Western Australia',
-    'Long-form fishing episode whose source description names coral trout, red emperor, Chinaman fish and Spanish mackerel. It is a promising multi-species candidate, but no event queue is shown until time-coded species labels are reviewed.',
+    'Long-form fishing episode with eight human-reviewed catch events: Common Coral Trout x1, Chinamanfish x3, Red Emperor x1 and Spanish Mackerel x3. No wildlife interaction is evidenced in this source.',
     'West Moore Island fishing episode', 'YouTube',
     'https://www.youtube.com/watch?v=b4KcVC11KVI',
     'https://www.youtube-nocookie.com/embed/b4KcVC11KVI',
-    'Original uploader via YouTube', null,
-    'annotation-pending', 'AFMA-CM-CANDIDATE-2026.09',
-    'Candidate source only. No review events have been created because time-coded ground truth is pending.'
+    'Original uploader via YouTube', 1155,
+    'human-ground-truth-v1', 'AFMA-CM-WEST-MOORE-GROUND-TRUTH-2026.09',
+    'Eight human-curated, time-coded catch observations grounded in reviewed footage and narration. They are the benchmark for model trials, not live model output.'
   );
+
+  select t.trip_id, ar.analysis_run_id
+    into l_west_trip_id, l_west_run_id
+    from afma_cm_trips t
+    join afma_cm_analysis_runs ar
+      on ar.trip_id = t.trip_id
+    join afma_cm_media_assets m
+      on m.media_asset_id = ar.media_asset_id
+     and m.asset_role = 'SOURCE_VIDEO'
+   where t.trip_ref = 'CM-WA-001';
+
+  upsert_observation(
+    l_west_run_id, 158, 177, 'Common Coral Trout', l_coral_spcode, .99,
+    'One fish is landed and displayed. Its spotted red/orange profile and repeated spoken identification as coral trout support the CAAB candidate; final retention and size are not inferred.'
+  );
+  upsert_observation(
+    l_west_run_id, 202, 243, 'Chinamanfish', l_chinaman_spcode, .99,
+    'One banded red/orange fish is landed and displayed. The speaker first says red emperor, then explicitly corrects the identification to Chinamanfish; the correction and visible pattern support the CAAB candidate.'
+  );
+  upsert_observation(
+    l_west_run_id, 249, 270, 'Red Emperor', l_emperor_spcode, .99,
+    'One fish is landed and displayed and is repeatedly identified in the footage as red emperor. The event is distinct from the preceding corrected Chinamanfish catch.'
+  );
+  upsert_observation(
+    l_west_run_id, 387, 428, 'Chinamanfish', l_chinaman_spcode, .96,
+    'First of two distinct Chinamanfish visible during the double hook-up. Both fish are shown together; this event records one individual so the later display is not counted again.'
+  );
+  upsert_observation(
+    l_west_run_id, 402, 428, 'Chinamanfish', l_chinaman_spcode, .96,
+    'Second of two distinct Chinamanfish visible during the double hook-up. The simultaneous two-fish view supports a second individual rather than a replay of the first.'
+  );
+  upsert_observation(
+    l_west_run_id, 748, 860, 'Spanish Mackerel', l_mackerel_spcode, .99,
+    'One Spanish Mackerel is fought, brought alongside, landed and displayed. Narration identifies the species; spoken weight estimates are not treated as measurements.'
+  );
+  upsert_observation(
+    l_west_run_id, 904, 990, 'Spanish Mackerel', l_mackerel_spcode, .99,
+    'A second distinct Spanish Mackerel is fought, landed and displayed. The separate hook-up and landing establish a new individual.'
+  );
+  upsert_observation(
+    l_west_run_id, 1010, 1101, 'Spanish Mackerel', l_mackerel_spcode, .98,
+    'A third distinct Spanish Mackerel is brought to the boat and displayed after becoming entangled in two lures. The exact hooking mechanism does not change the unique-fish count; size and final disposition remain unknown.'
+  );
+
+  insert into afma_cm_audit_events (
+    trip_id, entity_type, entity_id, action_name, detail_text
+  )
+  select l_west_trip_id, 'TRIP', l_west_trip_id,
+         'WEST_MOORE_GROUND_TRUTH_PUBLISHED',
+         'Eight human-reviewed catch events published as the benchmark: Common Coral Trout 1, Chinamanfish 3, Red Emperor 1, Spanish Mackerel 3; no wildlife interaction claimed.'
+    from dual
+   where not exists (
+     select 1
+       from afma_cm_audit_events
+      where trip_id = l_west_trip_id
+        and action_name = 'WEST_MOORE_GROUND_TRUTH_PUBLISHED'
+   );
 
   commit;
 end;

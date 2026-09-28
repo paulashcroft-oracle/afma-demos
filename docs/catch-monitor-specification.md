@@ -5,7 +5,7 @@ Prepared: 26 September 2026
 Implemented: 28 September 2026 under AI Hub task `caab-016`  
 Scope: AIDEMODB app 101 demonstrator, not a production reporting system.
 
-Implemented slice: reviewer-only page 4, versioned reported-data API, freeze/amend rules, CAAB-linked identities, selectable source-traced video cases, evidence-provenance labels, catch/wildlife review controls, reconciliation, audit events, governed media metadata and the hybrid-incremental library plan. Live computer vision, private-object ingestion, bulk media discovery, import templates and production authorisation/retention controls remain later delivery gates.
+Implemented slice: reviewer-only page 4, versioned reported-data API, freeze/amend rules, CAAB-linked identities, selectable source-traced video cases, evidence-provenance labels, catch/wildlife review controls, reconciliation, audit events, governed media metadata, the hybrid-incremental library plan, West Moore ground truth and isolated APEX-to-Gemini trials. Publishing model output into the queue, structured per-fish measurements, private-object ingestion, bulk media discovery, import templates and production authorisation/retention controls remain later delivery gates.
 
 ## Implemented selectable video set
 
@@ -16,10 +16,14 @@ The selector changes the source video, description, synthetic/received compariso
 | `CM-QLD-002` — [ABC Great Barrier Reef handline](https://www.abc.net.au/news/2024-06-07/sharks-take-handline-fishermens-catch/103948396) | One hooked reef fish and sharks sighting/contacting or taking the catch. Useful for catch plus depredation; fish and shark species remain unresolved. | Three human-curated, time-coded demo events grounded in the reviewed clip; not live model output. |
 | `CM-QLD-003` — [AMCS Mackay turtle gillnet](https://www.marineconservation.org.au/marine-conservationists-uncover-footage-of-turtle-death-traps-in-our-reef/) | Multiple marine turtles visibly entangled in gillnet. The publisher reports at least seven animals. | One source-described aggregate/minimum; species-level and individual time coding remain pending. |
 | `CM-QLD-004` — [ABC Bundaberg prawn trawler](https://www.abc.net.au/news/2024-03-02/video-sharks-dolphins-maul-prawn-trawler-catch/103534252) | A dolphin and multiple sharks around a trawler, including sharks contacting the caught mass. Useful as a crowded interaction/counting stress test. | Three human-curated, time-coded demo events; minimum counts and unresolved species are explicit. |
-| `CM-WA-001` — [West Moore Island episode](https://www.youtube.com/watch?v=b4KcVC11KVI) | Source description names coral trout, red emperor, Chinaman fish and Spanish mackerel across a long-form fishing episode. | Candidate only: selectable for playback, but the queue is deliberately empty until time-coded labels are approved. |
+| `CM-WA-001` — [West Moore Island episode](https://www.youtube.com/watch?v=b4KcVC11KVI) | Eight reviewed catches: Common Coral Trout x1, Chinamanfish x3, Red Emperor x1 and Spanish Mackerel x3. No wildlife interaction is evidenced. | Eight human-curated, time-coded events form the benchmark. They are not live model output. |
 | `CM-QLD-001` — original workflow fixture | The original public coral-trout-themed source used to exercise the first UI slice. | Explicitly labelled synthetic UI fixture; its four deterministic events are not claims about the video. |
 
 Each selected case displays its region, fishing context, duration where known, source link, rights status, annotation/evidence status and a plain-language description. Source narration may inform a note, but species-level CAAB identity remains unresolved unless the visual evidence and reference material support that precision. The current “AI” queue is therefore a deterministic evaluation fixture assembled from manual/source review, not the output of a connected computer-vision model.
+
+The first APEX-native Gemini experiment is documented in [Catch Monitor video-analysis options and benchmark](catch-monitor-video-analysis-options.md). Raw trial results remain in `AFMA_CM_AI_TRIALS`, isolated from `AFMA_CM_OBSERVATIONS`; no model response is automatically published to the review queue.
+
+Current model decision: use OCI Gemini 2.5 Pro in Chicago as the demonstrator's default video-analysis model. Flash comparison results remain recorded, but Flash is deferred unless later volume, latency or cost warrants a second tier.
 
 ## Decision requested
 
