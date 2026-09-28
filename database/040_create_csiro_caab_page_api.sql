@@ -59,7 +59,7 @@ create or replace package body csiro_caab_page_api as
     append_line(p_html, '.afma-caab-hero h1{font-size:clamp(2.1rem,4.5vw,4.4rem);line-height:1.02;margin:.2rem 0 .8rem;font-weight:850;letter-spacing:0;color:var(--afma-navy)}');
     append_line(p_html, '.afma-caab-hero p{font-size:clamp(1rem,1.6vw,1.25rem);line-height:1.55;color:var(--afma-muted);max-width:58rem}');
     append_line(p_html, '.afma-caab-kicker{font-weight:800;text-transform:uppercase;color:var(--afma-teal);letter-spacing:.08em;font-size:.82rem}');
-    append_line(p_html, '.afma-caab-cta-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;max-width:64rem}');
+    append_line(p_html, '.afma-caab-cta-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:.8rem;max-width:72rem}');
     append_line(p_html, '.afma-caab-cta{display:inline-grid;grid-template-columns:auto 1fr auto;align-items:center;gap:1rem;margin-top:1.2rem;padding:1rem 1.1rem;border:1px solid #86cfd6;background:linear-gradient(135deg,#e8fbff,#f4fbef);border-radius:8px;color:var(--afma-navy);text-decoration:none;box-shadow:0 12px 32px rgba(0,74,96,.14);max-width:32rem}');
     append_line(p_html, '.afma-caab-cta:hover{text-decoration:none;transform:translateY(-1px);box-shadow:0 16px 40px rgba(0,74,96,.2)}');
     append_line(p_html, '.afma-caab-cta strong{display:block;font-size:1.08rem}.afma-caab-cta span{display:block;color:var(--afma-muted);font-size:.9rem;margin-top:.15rem}');
@@ -167,6 +167,10 @@ create or replace package body csiro_caab_page_api as
     append_line(l_html, '<span class="afma-caab-cta-icon">');
     append_ocean_svg(l_html);
     append_line(l_html, '</span><span><strong>View visual CAAB reports</strong><span>Inspect taxonomy mix, source coverage, fish aliases, and Australian region coverage.</span></span><span aria-hidden="true">&rarr;</span></a>');
+    append_line(l_html, '<a class="afma-caab-cta" href="' || page_url(4) || '">');
+    append_line(l_html, '<span class="afma-caab-cta-icon">');
+    append_ocean_svg(l_html);
+    append_line(l_html, '</span><span><strong>Review fishing video</strong><span>Compare versioned reported catch with AI-assisted species, count and wildlife observations.</span></span><span aria-hidden="true">&rarr;</span></a>');
     append_line(l_html, '</div>');
     append_line(l_html, '<div class="afma-caab-stats"><div><span>Records</span><strong>' || to_char(l_total, 'FM999G999G999') || '</strong></div><div><span>Active</span><strong>' || to_char(l_active, 'FM999G999G999') || '</strong></div><div><span>Species</span><strong>' || to_char(l_species, 'FM999G999G999') || '</strong></div></div>');
     append_line(l_html, '</div><div class="afma-caab-visual">');

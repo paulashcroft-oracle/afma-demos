@@ -1,0 +1,98 @@
+page 4 (
+    name: Catch Monitor
+    alias: CATCH-MONITOR
+    title: AFMA Catch Monitor
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region afma-catch-monitor (
+        name: AFMA Catch Monitor
+        type: dynamicContent
+        source {
+            plsqlFunctionBody: return afma_cm_page_api.workbench_html;
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        advanced {
+            htmlDomId: afma-catch-monitor
+        }
+    )
+
+    process afma-cm-action (
+        name: AFMA_CM_ACTION
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                declare
+                  l_action varchar2(40) := upper(apex_application.g_x01);
+                  l_trip_id number := to_number(apex_application.g_x02);
+                begin
+                  apex_json.open_object;
+                  begin
+                    case l_action
+                      when 'ADD_CATCH' then
+                        afma_cm_api.save_reported_catch(
+                          p_trip_id             => l_trip_id,
+                          p_original_taxon_text => apex_application.g_x03,
+                          p_reported_count      => case when apex_application.g_x04 is null then null else to_number(apex_application.g_x04) end,
+                          p_reported_weight_kg  => case when apex_application.g_x05 is null then null else to_number(apex_application.g_x05) end,
+                          p_catch_state         => apex_application.g_x06
+                        );
+                      when 'FREEZE' then
+                        afma_cm_api.freeze_report(l_trip_id);
+                      when 'AMEND' then
+                        afma_cm_api.create_amendment(l_trip_id, apex_application.g_x03);
+                      when 'REVIEW' then
+                        afma_cm_api.review_observation(
+                          p_trip_id                    => l_trip_id,
+                          p_observation_id             => to_number(apex_application.g_x03),
+                          p_reviewer_status            => apex_application.g_x04,
+                          p_reviewed_spcode            => apex_application.g_x05,
+                          p_reviewed_count             => case when apex_application.g_x06 is null then null else to_number(apex_application.g_x06) end,
+                          p_reviewed_interaction_class => apex_application.g_x07,
+                          p_reviewer_notes             => apex_application.g_x08
+                        );
+                      when 'COMPLETE' then
+                        afma_cm_api.complete_review(l_trip_id);
+                      else
+                        raise_application_error(-20020, 'Unsupported Catch Monitor action.');
+                    end case;
+                    apex_json.write('success', true);
+                  exception
+                    when others then
+                      apex_json.write('success', false);
+                      apex_json.write('message', sqlerrm);
+                  end;
+                  apex_json.close_object;
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 10
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 1010800402
+        }
+    )
+
+)
+

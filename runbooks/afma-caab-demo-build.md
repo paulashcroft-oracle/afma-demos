@@ -39,6 +39,10 @@ Run these scripts in the `AFMA` APEX workspace SQL Commands session or as the `A
 6. `database/045_create_csiro_caab_report_views.sql`
 7. `database/085_create_ai_hub_feedback_model.sql`
 8. `database/086_verify_ai_hub_feedback_model.sql`
+9. `database/100_create_afma_catch_monitor_foundation.sql`
+10. `database/110_create_afma_catch_monitor_api.sql`
+11. `database/120_create_afma_catch_monitor_page_api.sql`
+12. `database/130_verify_afma_catch_monitor.sql`
 
 Numbered SQL is the canonical source only for database/data evolution: tables, views, packages, report views, reference/config rows, and explicit data loads. APEX pages, navigation, feedback UI, page processes, AI Configs, Web Credential metadata, and application/static-file behavior are owned by APEXlang/application source. Legacy mixed scripts `050`, `080`, `085_enable`, and `090` are not retained as canonical install scripts.
 
@@ -91,6 +95,15 @@ end;
 - Page 3: Reports
   - Summary cards and chart/report regions backed by `database/045_create_csiro_caab_report_views.sql`.
   - Current report set includes largest fish classes, taxonomic rank mix, status mix, habitat mix, curated aliases by jurisdiction, and curated regional alias detail.
+- Page 4: Catch Monitor
+  - Dynamic Content source: `return afma_cm_page_api.workbench_html;`
+  - Ajax Callback process name: `AFMA_CM_ACTION`.
+  - Authorised AFMA reviewer workflow; fishers are represented by a versioned `SYNTHETIC_DEMO` or `RECEIVED_RECORD`, not given an MVP portal.
+  - The seeded `CM-QLD-001` scenario uses the source-traced Queensland Coral Trout Fishery video and four `SIMULATED_DEMO` observations. The observations are deterministic workflow fixtures and are not asserted to have been measured from the linked video.
+  - Reported data can be amended only by creating a new version. `FROZEN_FOR_REVIEW` versions remain immutable.
+  - AI identity/count/interaction proposals remain separate from officer decisions; `Confirm`, `Correct`, `Reject`, and `Escalate` actions are audited.
+  - Catch and reviewed identities reference existing `CSIRO_CAAB_TAXA.SPCODE`; no second species master is created.
+  - The media library records source, rights status, approved purposes, restrictions and coverage. `UNCONFIRMED_INTERNAL_ONLY` is usable only inside the controlled demo and is excluded from public redistribution or custom training.
 
 ## AI Service Hook
 
@@ -166,6 +179,7 @@ Minimum checks before moving the build tasks to Test:
 - `select count(*) from csiro_caab_fishing_regions;` returns `17`.
 - Database invalid object probe returns no invalid `CSIRO_CAAB%`, `AFMA_AI_HUB_FORWARDER`, or `AI_HUB_FEEDBACK%` objects.
 - Application source/export evidence represents pages `1:Home`, `2:CSIRO CAAB Agent`, `3:Reports`, and `9999:Login Page`.
+- Application source/export evidence also represents page `4:Catch Monitor` and Ajax process `AFMA_CM_ACTION`.
 - Home page renders the AFMA CAAB AI Demo visual button and dataset counts.
 - Page 2 accepts a prompt such as `Show me jewfish and mulloway names used around NSW and include any local nicknames.` and returns rich output with `jewfish`, `jewie`, and `mulla` near the top of the common-name table.
 - Page 2 model dropdown lists the nine workspace OCI Generative AI Services.
@@ -181,6 +195,10 @@ Minimum checks before moving the build tasks to Test:
 - `AFMA_AI_HUB_FORWARDER`, `AI_HUB_FEEDBACK_FORWARDS`, and `AI_HUB_FEEDBACK_CANDIDATES_V` are valid.
 - APEX Web Credential metadata `AI_HUB_AFMA_FEEDBACK_API` exists in the live workspace or APEX application/source evidence; the raw key is not stored in the repository.
 - AI Hub project metadata is updated with confirmed app ID, runtime URL, and builder URL.
+- `database/130_verify_afma_catch_monitor.sql` reports all `AFMA_CM_%` objects valid, trip `CM-QLD-001`, one frozen reported version, two reported catch lines, four observations and three governed media records.
+- Catch Monitor visibly labels `AI-assisted review — reviewer confirmation required`, `DEMO DATA`, `SIMULATED_DEMO`, model version and media manifest.
+- The invalid-observation Ajax guard returns a controlled `ORA-20008` JSON response without mutating data, confirming the page/process/package boundary.
+- Existing Home, CSIRO CAAB Agent and Reports pages still render without an APEX or database error after Catch Monitor deployment.
 
 ## Live Verification On 2026-06-11
 
@@ -258,3 +276,10 @@ Captured from AIDEMODB workspace `AFMA` on 2026-07-15 after APEXlang/source-cont
 
 - APEXlang Standard Export: `exports/apex/afma/101/20260715-apexlang-standard-export/`
 - APEX SQL Scripts export: not captured; the export helper did not produce a completed download. Live catalog rows and source-pattern verification are recorded in `APEXlang And SQL Source Cleanup On 2026-07-15`.
+
+Captured from AIDEMODB workspace `AFMA` on 2026-09-28 for AI Hub task `caab-016`:
+
+- Pre-change APEXlang Standard Export: `exports/apex/afma/101/20260928-before-caab-016-apexlang-standard-export/`
+- Post-verification APEXlang Standard Export: `exports/apex/afma/101/20260928-after-caab-016-apexlang-standard-export/`
+- The repository-safe copies exclude `workspace-components/credentials/**` and `workspace-components/generative-ai-services/**`.
+- Runtime verification as `DEMO_USER` observed page 4 with four event cards, two reported catch lines, three media cards, CAAB codes `37311078` and `37346004`, full Catch Monitor styling, a controlled Ajax validation response, and passing Home/Agent/Reports regressions.

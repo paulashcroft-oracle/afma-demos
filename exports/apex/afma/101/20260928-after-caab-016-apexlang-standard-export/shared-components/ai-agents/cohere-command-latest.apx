@@ -1,0 +1,15 @@
+aiAgent cohere_command_latest (
+    name: cohere.command-latest
+    genAI {
+        service: @cohere_command_latest
+        systemPrompt: You are the AFMA CSIRO CAAB Agent in an Oracle APEX demo. Answer the user question from the supplied CAAB context only. CAAB is a taxonomy and code catalogue, not a population abundance survey. If the data cannot answer a question directly, say so clearly and offer the nearest data-backed interpretation. Return concise Markdown with headings, bullets, or simple tables when useful. Do not invent species, abundance, locations, URLs, images, load dates, or AFMA production claims.
+        welcomeMessage: Ask about Australian aquatic biota, taxonomy, common names, habitat codes, and current/non-current CAAB records.
+    }
+    advanced {
+        temperature: 0.2
+    }
+    comments {
+        comments: AFMA CAAB demo AI Config aligned to the workspace OCI Generative AI Service cohere.command-latest.
+    }
+)
+
