@@ -38,6 +38,24 @@ create or replace package body afma_cm_page_api as
     return apex_escape.html_attribute(p_value);
   end a;
 
+  function youtube_embed_url(p_source_url in varchar2) return varchar2 is
+    l_url      varchar2(2000) := trim(p_source_url);
+    l_video_id varchar2(32);
+  begin
+    if regexp_like(l_url, '^https://youtu\.be/', 'i') then
+      l_video_id := regexp_substr(l_url, 'youtu\.be/([[:alnum:]_-]{11})', 1, 1, 'i', 1);
+    elsif regexp_like(l_url, '^https://(www\.|m\.)?youtube\.com/watch([/?]|$)', 'i') then
+      l_video_id := regexp_substr(l_url, '[?&]v=([[:alnum:]_-]{11})', 1, 1, 'i', 1);
+    elsif regexp_like(l_url, '^https://(www\.|m\.)?youtube\.com/(shorts|embed|live)/', 'i') then
+      l_video_id := regexp_substr(l_url, '/(shorts|embed|live)/([[:alnum:]_-]{11})', 1, 1, 'i', 2);
+    end if;
+
+    if regexp_like(l_video_id, '^[[:alnum:]_-]{11}$') then
+      return 'https://www.youtube-nocookie.com/embed/' || l_video_id || '?rel=0';
+    end if;
+    return null;
+  end youtube_embed_url;
+
   function badge_class(p_value in varchar2) return varchar2 is
     l_value varchar2(100) := upper(coalesce(p_value, 'UNKNOWN'));
   begin
@@ -89,6 +107,8 @@ create or replace package body afma_cm_page_api as
     l_run_notes varchar2(2000);
     l_requested_ref varchar2(40);
     l_annotation_status varchar2(60);
+    l_stored_media_count number := 0;
+    l_public_youtube_embed_yn varchar2(1) := 'N';
     l_open_count number := 0;
     l_asset_count number := 0;
     l_gap_count number := 0;
@@ -161,11 +181,25 @@ create or replace package body afma_cm_page_api as
      where ar.trip_id = l_trip_id
        and ar.analysis_run_id = (select max(analysis_run_id) from afma_cm_analysis_runs where trip_id = l_trip_id);
 
+    if l_embed_url is null then
+      l_embed_url := youtube_embed_url(l_source_url);
+    end if;
+    if l_embed_url like 'https://www.youtube-nocookie.com/embed/%' then
+      l_public_youtube_embed_yn := 'Y';
+    end if;
+
     select count(case when reviewer_status = 'NEEDS_REVIEW' then 1 end),
            count(*)
       into l_open_count, l_video_count
       from afma_cm_observations
      where analysis_run_id = l_run_id;
+
+    select count(*)
+      into l_stored_media_count
+      from afma_cm_video_submissions vs
+      join afma_cm_media_objects mo on mo.submission_id = vs.submission_id
+     where vs.analysis_run_id = l_run_id
+       and mo.object_role = 'SOURCE_IMPORT';
 
     select count(*),
            count(case when coverage_status in ('MEDIA_GAP','NEEDS_TAXON_REVIEW') then 1 end)
@@ -422,9 +456,12 @@ create or replace package body afma_cm_page_api as
     elsif lower(l_embed_url) like '%.mp4%' then
       add_line(l_html, '<video class="cm-video" src="' || a(l_embed_url) || '" title="' || a(l_media_title) || '" controls preload="metadata" playsinline></video>');
     else
-      add_line(l_html, '<iframe class="cm-video" src="' || a(l_embed_url) || '" title="' || a(l_media_title) || '" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>');
+      add_line(l_html, '<iframe class="cm-video" src="' || a(l_embed_url) || '" title="' || a(l_media_title) || '" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>');
     end if;
-    add_line(l_html, '<div class="cm-meta"><span class="cm-badge cm-badge-neutral">' || h(l_annotation_status) || '</span><span class="cm-badge cm-badge-neutral">' || h(l_model_version) || '</span><span class="cm-badge cm-badge-neutral">Manifest ' || h(l_manifest) || '</span>' || case when lower(l_source_url) like 'https://%' then '<a class="cm-link" href="' || a(l_source_url) || '" target="_blank" rel="noopener">Open original source</a>' end || '</div>');
+    add_line(l_html, '<div class="cm-meta"><span class="cm-badge cm-badge-neutral">' || h(l_annotation_status) || '</span><span class="cm-badge cm-badge-neutral">' || h(l_model_version) || '</span><span class="cm-badge cm-badge-neutral">Manifest ' || h(l_manifest) || '</span>' || case when l_public_youtube_embed_yn = 'Y' then '<span class="cm-badge cm-badge-neutral">Public YouTube playback</span>' end || case when lower(l_source_url) like 'https://%' then '<a class="cm-link" href="' || a(l_source_url) || '" target="_blank" rel="noopener">Open original source</a>' end || '</div>');
+    if l_public_youtube_embed_yn = 'Y' then
+      add_line(l_html, '<p class="cm-footnote"><strong>Playback:</strong> This player loads the public source from YouTube/Google, which may receive normal browser and connection information. ' || case when l_stored_media_count > 0 then 'Gemini analysis used the stored video-only copy retained in AIDEMODB, not the embedded playback stream.' else 'This curated scenario is reviewed against the public source.' end || '</p>');
+    end if;
     add_line(l_html, '<p class="cm-footnote"><strong>Evidence status:</strong> ' || h(l_run_notes) || '</p></div></section>');
 
     add_line(l_html, '<section class="cm-card"><div class="cm-card__head"><div><h2>Review queue</h2><p>Confirm, correct, reject or escalate each proposed event.</p></div><span class="cm-badge ' || badge_class(case when l_open_count = 0 then 'CONFIRMED' else 'NEEDS_REVIEW' end) || '">' || l_open_count || ' unresolved</span></div><div class="cm-card__body"><div class="cm-events">');

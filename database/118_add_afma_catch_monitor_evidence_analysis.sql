@@ -914,6 +914,30 @@ create or replace package body afma_cm_evidence_api as
            processing_completed_at = systimestamp,
            last_progress_at = systimestamp
      where submission_id = p_submission_id;
+
+    update afma_cm_trips
+       set notes = (
+         select substr(
+                  rtrim(coalesce(trim(vs.description_text),
+                                 trim(vs.submitted_description),
+                                 trim(vs.ai_description_text),
+                                 trim(vs.display_title)), ' .') ||
+                  '. Gemini Pro analysis completed: ' || l_event_count ||
+                  ' visual evidence event(s) were proposed for AFMA officer review.',
+                  1,
+                  2000
+                )
+           from afma_cm_video_submissions vs
+           join afma_cm_analysis_runs ar on ar.analysis_run_id = vs.analysis_run_id
+          where vs.submission_id = p_submission_id
+            and ar.trip_id = afma_cm_trips.trip_id
+       )
+     where trip_id = (
+       select ar.trip_id
+         from afma_cm_video_submissions vs
+         join afma_cm_analysis_runs ar on ar.analysis_run_id = vs.analysis_run_id
+        where vs.submission_id = p_submission_id
+     );
     commit;
   exception
     when no_data_found then
@@ -975,6 +999,38 @@ create or replace package body afma_cm_evidence_api as
   end approve_and_run;
 end afma_cm_evidence_api;
 /
+
+-- Repair the initial intake wording for already-completed demo analyses. This
+-- preserves the human-editable description and replaces only the obsolete
+-- "analysis has not started" lifecycle statement.
+update afma_cm_trips t
+   set notes = (
+     select substr(
+              rtrim(coalesce(trim(vs.description_text),
+                             trim(vs.submitted_description),
+                             trim(vs.ai_description_text),
+                             trim(vs.display_title)), ' .') ||
+              '. Gemini Pro analysis completed: ' ||
+              (select count(*)
+                 from afma_cm_observations o
+                where o.analysis_run_id = vs.analysis_run_id) ||
+              ' visual evidence event(s) were proposed for AFMA officer review.',
+              1,
+              2000
+            )
+       from afma_cm_video_submissions vs
+       join afma_cm_analysis_runs ar on ar.analysis_run_id = vs.analysis_run_id
+      where ar.trip_id = t.trip_id
+        and vs.processing_status = 'ANALYSIS_COMPLETE'
+      fetch first 1 row only
+   )
+ where exists (
+   select 1
+     from afma_cm_video_submissions vs
+     join afma_cm_analysis_runs ar on ar.analysis_run_id = vs.analysis_run_id
+    where ar.trip_id = t.trip_id
+      and vs.processing_status = 'ANALYSIS_COMPLETE'
+ );
 
 comment on table afma_cm_evidence_runs is 'Auditable full-video Gemini evidence runs. Raw model output is retained before deterministic validation and reviewer-queue publication.';
 /

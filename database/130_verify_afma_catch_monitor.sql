@@ -259,4 +259,17 @@ select vs.submission_ref,
  group by vs.submission_ref
  order by vs.submission_ref;
 
+select count(*) completed_submission_stale_description_count
+  from afma_cm_trips t
+  join afma_cm_analysis_runs ar on ar.trip_id = t.trip_id
+  join afma_cm_video_submissions vs on vs.analysis_run_id = ar.analysis_run_id
+ where vs.processing_status = 'ANALYSIS_COMPLETE'
+   and lower(t.notes) like '%analysis has not started%';
+
+select count(*) youtube_playback_package_line_count
+  from user_source
+ where name = 'AFMA_CM_PAGE_API'
+   and type = 'PACKAGE BODY'
+   and text like '%youtube-nocookie%';
+
 prompt AFMA 130 complete
