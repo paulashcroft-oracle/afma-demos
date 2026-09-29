@@ -19,6 +19,24 @@ This register makes the current experimental prompt contracts reviewable. It doe
 
 V4 is a demo evidence proposal contract, not production authorisation. The runtime shows its exact immutable prompt and schema and permits re-analysis of an unreviewed completed submission under the newer active contract.
 
+## Life of a Fisherman 00:00–00:50 overcount finding
+
+The retained v4 raw response proposed `120` new catches (`100–140`) for the first 50-second segment. Frame review does not support that total: fishing effort begins at about `00:24`, one discernible landing occurs near `00:33`, another near `00:48`, and up to two further landing actions occur at the `00:50` boundary. The defensible reviewer finding is therefore no more than about four depicted transitions in or immediately adjacent to the segment, not 120.
+
+The model response describes “high-throughput” fishing and “numerous crew” and then estimates a rate-derived total. It analysed the lower-bitrate 1.37 MB rendition after the 4.30 MB rendition failed. V4 permits `ESTIMATED_RANGE` for `NEW_CATCHES` and validates arithmetic and schema shape, but it does not require a timestamped visual anchor for each counted landing transition. The response therefore passed deterministic validation while violating the intended evidence standard.
+
+An audited fresh run of the restored same 1.37 MB segment under unchanged v4 independently proposed Skipjack Tuna count `110` with range `80–140`, citing “multiple crew” and the “rapid” landing rate. The original run `82` (count 120) remains as superseded evidence and fresh run `103` is current. The repeat result rules out a stale-response/cache explanation and strengthens the prompt-contract diagnosis; it does not validate either count.
+
+The application now supports an audited fresh analysis of one unreviewed stored segment. It uses the currently active prompt unchanged, records the reviewer reason, retains the original raw response and proposal as superseded evidence, and publishes only the latest successful proposal in the review queue. A failed retry leaves the prior proposal current.
+
+A proposed v5 must be reviewed before activation. At minimum it should:
+
+- count only visibly completed landing, boarding, gear-removal or immediate-result display transitions;
+- prohibit extrapolation from the number of fishers, pole motion, apparent pace, deck inventory, title or context;
+- prohibit `ESTIMATED_RANGE` for `NEW_CATCHES` while retaining it, if useful, for clearly labelled `VISIBLE_ACCUMULATION` inventory;
+- require temporal anchors supporting every individual count or each transition within a small batch; and
+- define segment intervals as start-inclusive and end-exclusive so a boundary landing is assigned once.
+
 ## Production AFMA EM prompt invariant
 
 AFMA's [September 2026 privacy-impact summary](https://www.afma.gov.au/sites/default/files/2026-09/E-monitoring%20Summary%20Privacy%20Impact%20Assessment%20(Sept%202026).pdf) states that EM footage is fixed-camera video only, with no microphones or audio recordings. Therefore every production AFMA EM prompt and schema must:

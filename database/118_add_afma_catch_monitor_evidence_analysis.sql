@@ -152,6 +152,152 @@ begin
 end;
 /
 
+declare
+  l_count number;
+begin
+  select count(*) into l_count
+    from user_tab_columns
+   where table_name = 'AFMA_CM_EVIDENCE_RUNS'
+     and column_name = 'RUN_PURPOSE';
+  if l_count = 0 then
+    execute immediate q'[alter table afma_cm_evidence_runs add run_purpose varchar2(30 char) default 'INITIAL_ANALYSIS' not null]';
+  end if;
+
+  select count(*) into l_count
+    from user_tab_columns
+   where table_name = 'AFMA_CM_EVIDENCE_RUNS'
+     and column_name = 'REPLACES_EVIDENCE_RUN_ID';
+  if l_count = 0 then
+    execute immediate 'alter table afma_cm_evidence_runs add replaces_evidence_run_id number';
+  end if;
+
+  select count(*) into l_count
+    from user_tab_columns
+   where table_name = 'AFMA_CM_EVIDENCE_RUNS'
+     and column_name = 'REVIEWER_INSTRUCTION';
+  if l_count = 0 then
+    execute immediate 'alter table afma_cm_evidence_runs add reviewer_instruction varchar2(1000 char)';
+  end if;
+
+  select count(*) into l_count
+    from user_constraints
+   where table_name = 'AFMA_CM_EVIDENCE_RUNS'
+     and constraint_name = 'AFMA_CM_EVIDENCE_RUNS_CK_PURPOSE';
+  if l_count = 0 then
+    execute immediate q'[alter table afma_cm_evidence_runs add constraint afma_cm_evidence_runs_ck_purpose check (run_purpose in ('INITIAL_ANALYSIS','SEGMENT_REANALYSIS'))]';
+  end if;
+
+  select count(*) into l_count
+    from user_constraints
+   where table_name = 'AFMA_CM_EVIDENCE_RUNS'
+     and constraint_name = 'AFMA_CM_EVIDENCE_RUNS_FK_REPLACES';
+  if l_count = 0 then
+    execute immediate q'[alter table afma_cm_evidence_runs add constraint afma_cm_evidence_runs_fk_replaces foreign key (replaces_evidence_run_id) references afma_cm_evidence_runs (evidence_run_id)]';
+  end if;
+
+  select count(*) into l_count
+    from user_tab_columns
+   where table_name = 'AFMA_CM_OBSERVATIONS'
+     and column_name = 'EVIDENCE_RUN_ID';
+  if l_count = 0 then
+    execute immediate 'alter table afma_cm_observations add evidence_run_id number';
+  end if;
+
+  select count(*) into l_count
+    from user_tab_columns
+   where table_name = 'AFMA_CM_OBSERVATIONS'
+     and column_name = 'SUPERSEDED_AT';
+  if l_count = 0 then
+    execute immediate 'alter table afma_cm_observations add superseded_at timestamp with local time zone';
+  end if;
+
+  select count(*) into l_count
+    from user_tab_columns
+   where table_name = 'AFMA_CM_OBSERVATIONS'
+     and column_name = 'SUPERSEDED_BY_EVIDENCE_RUN_ID';
+  if l_count = 0 then
+    execute immediate 'alter table afma_cm_observations add superseded_by_evidence_run_id number';
+  end if;
+
+  select count(*) into l_count
+    from user_constraints
+   where table_name = 'AFMA_CM_OBSERVATIONS'
+     and constraint_name = 'AFMA_CM_OBS_FK_EVIDENCE_RUN';
+  if l_count = 0 then
+    execute immediate q'[alter table afma_cm_observations add constraint afma_cm_obs_fk_evidence_run foreign key (evidence_run_id) references afma_cm_evidence_runs (evidence_run_id)]';
+  end if;
+
+  select count(*) into l_count
+    from user_constraints
+   where table_name = 'AFMA_CM_OBSERVATIONS'
+     and constraint_name = 'AFMA_CM_OBS_FK_SUPERSEDED_RUN';
+  if l_count = 0 then
+    execute immediate q'[alter table afma_cm_observations add constraint afma_cm_obs_fk_superseded_run foreign key (superseded_by_evidence_run_id) references afma_cm_evidence_runs (evidence_run_id)]';
+  end if;
+end;
+/
+
+update afma_cm_observations o
+   set evidence_run_id = (
+     select max(er.evidence_run_id) keep (dense_rank last order by er.completed_at, er.evidence_run_id)
+       from afma_cm_evidence_runs er
+       join afma_cm_media_objects mo on mo.media_object_id = er.media_object_id
+      where er.analysis_run_id = o.analysis_run_id
+        and er.run_status = 'COMPLETE'
+        and er.validation_status = 'PASS'
+        and (o.evidence_group_ref like mo.object_key || ':%'
+             or (o.evidence_group_ref is null
+                 and o.start_second >= coalesce(mo.source_start_second, 0)
+                 and o.start_second < coalesce(mo.source_end_second, mo.duration_seconds) + 0.001))
+   )
+ where o.evidence_run_id is null
+   and exists (
+     select 1
+       from afma_cm_evidence_runs er
+       join afma_cm_media_objects mo on mo.media_object_id = er.media_object_id
+      where er.analysis_run_id = o.analysis_run_id
+        and er.run_status = 'COMPLETE'
+        and er.validation_status = 'PASS'
+        and (o.evidence_group_ref like mo.object_key || ':%'
+             or (o.evidence_group_ref is null
+                 and o.start_second >= coalesce(mo.source_start_second, 0)
+                 and o.start_second < coalesce(mo.source_end_second, mo.duration_seconds) + 0.001))
+   );
+/
+
+create or replace view afma_cm_trip_summary_v as
+with latest_report as (
+  select rv.*,
+         row_number() over (partition by rv.trip_id order by rv.version_no desc) rn
+    from afma_cm_report_versions rv
+)
+select t.trip_id,
+       t.trip_ref,
+       t.source_type,
+       t.fishery_name,
+       t.gear_method,
+       t.region_name,
+       t.status,
+       rv.report_version_id,
+       rv.version_no,
+       rv.report_status,
+       count(distinct rc.reported_catch_id) reported_lines,
+       count(distinct o.observation_id) observations,
+       count(distinct case when o.reviewer_status = 'NEEDS_REVIEW' then o.observation_id end) needs_review
+  from afma_cm_trips t
+  left join latest_report rv
+    on rv.trip_id = t.trip_id
+   and rv.rn = 1
+  left join afma_cm_operations op on op.report_version_id = rv.report_version_id
+  left join afma_cm_reported_catch rc on rc.operation_id = op.operation_id
+  left join afma_cm_analysis_runs ar on ar.trip_id = t.trip_id and ar.report_version_id = rv.report_version_id
+  left join afma_cm_observations o
+    on o.analysis_run_id = ar.analysis_run_id
+   and o.superseded_at is null
+ group by t.trip_id, t.trip_ref, t.source_type, t.fishery_name, t.gear_method,
+          t.region_name, t.status, rv.report_version_id, rv.version_no, rv.report_status;
+/
+
 merge into afma_cm_prompt_contracts d
 using (
   select
@@ -326,7 +472,15 @@ create or replace package afma_cm_evidence_api authid definer as
   );
 
   procedure run_submission(
-    p_submission_id in number
+    p_submission_id          in number,
+    p_force_media_object_id in number default null,
+    p_reviewer_instruction  in varchar2 default null
+  );
+
+  procedure rerun_segment(
+    p_submission_id          in number,
+    p_media_object_id        in number,
+    p_reviewer_instruction   in varchar2 default null
   );
 
   procedure adopt_analysis_rendition(
@@ -397,6 +551,7 @@ create or replace package body afma_cm_evidence_api as
     l_source_sha      varchar2(64);
     l_actor           varchar2(255) := actor_name;
     l_reviewed_count  number;
+    l_restored_existing_yn varchar2(1) := 'N';
   begin
     if not regexp_like(l_object_key, '^ANALYSIS_[A-Z0-9_]+$') then
       raise_application_error(-20312, 'Analysis rendition object keys must start with ANALYSIS_.');
@@ -439,6 +594,28 @@ create or replace package body afma_cm_evidence_api as
       if l_existing_sha <> l_source_sha then
         raise_application_error(-20313, 'A different rendition already uses this object key.');
       end if;
+      update afma_cm_media_objects target
+         set (target.content_blob,
+              target.file_bytes,
+              target.mime_type,
+              target.duration_seconds,
+              target.original_filename) = (
+           select source.content_blob,
+                  source.file_bytes,
+                  source.mime_type,
+                  source.duration_seconds,
+                  source.original_filename
+             from afma_cm_media_objects source
+            where source.submission_id = l_rendition_id
+              and source.object_key = 'SOURCE'
+         ),
+             target.acquisition_note = 'Time-bounded low-bitrate analysis rendition restored for reviewer-requested fresh analysis. Original source bytes remain stored separately.'
+       where target.submission_id = l_target_id
+         and target.object_key = l_object_key
+         and (target.content_blob is null or dbms_lob.getlength(target.content_blob) = 0);
+      if sql%rowcount > 0 then
+        l_restored_existing_yn := 'Y';
+      end if;
     exception
       when no_data_found then
         insert into afma_cm_media_objects (
@@ -460,11 +637,14 @@ create or replace package body afma_cm_evidence_api as
     end;
 
     update afma_cm_video_submissions
-       set processing_status = 'READY_FOR_ANALYSIS',
-           processing_stage = 'ANALYSIS_RENDITION_READY',
-           progress_percent = 40,
-           processing_message = 'Original source retained. One or more lower-bitrate analysis renditions are ready for Gemini Pro; no evidence events have been published.',
-           processing_completed_at = null,
+       set processing_status = case when l_restored_existing_yn = 'Y' then 'ANALYSIS_COMPLETE' else 'READY_FOR_ANALYSIS' end,
+           processing_stage = case when l_restored_existing_yn = 'Y' then 'READY_FOR_REVIEW' else 'ANALYSIS_RENDITION_READY' end,
+           progress_percent = case when l_restored_existing_yn = 'Y' then 100 else 40 end,
+           processing_message = case
+             when l_restored_existing_yn = 'Y' then 'Stored segment rendition restored for reviewer-requested fresh analysis. Existing review proposals remain current until a successful retry.'
+             else 'Original source retained. One or more lower-bitrate analysis renditions are ready for Gemini Pro; no evidence events have been published.'
+           end,
+           processing_completed_at = case when l_restored_existing_yn = 'Y' then systimestamp else null end,
            last_progress_at = systimestamp
      where submission_id = l_target_id;
 
@@ -491,9 +671,12 @@ create or replace package body afma_cm_evidence_api as
   end adopt_analysis_rendition;
 
   procedure run_submission(
-    p_submission_id in number
+    p_submission_id          in number,
+    p_force_media_object_id in number default null,
+    p_reviewer_instruction  in varchar2 default null
   ) is
     l_analysis_run_id number;
+    l_trip_id          number;
     l_source_duration  number;
     l_prompt_id        number;
     l_prompt_version   varchar2(100);
@@ -510,6 +693,7 @@ create or replace package body afma_cm_evidence_api as
     l_event            json_object_t;
     l_attachments      apex_ai.t_attachments := apex_ai.t_attachments();
     l_evidence_run_id  number;
+    l_replaces_run_id  number;
     l_reviewed_count   number;
     l_clip_count       number := 0;
     l_clip_no          number := 0;
@@ -547,10 +731,12 @@ create or replace package body afma_cm_evidence_api as
     l_meta_summary     varchar2(4000);
     l_meta_confidence  number;
     l_cached_response  boolean;
+    l_current_event_count number := 0;
+    l_actor            varchar2(255) := actor_name;
     l_new_model_calls  number := 0;
     c_max_model_calls_per_request constant pls_integer := 6;
   begin
-    if upper(coalesce(actor_name, 'ANONYMOUS')) in ('ANONYMOUS','NOBODY','PUBLIC_USER') then
+    if upper(coalesce(l_actor, 'ANONYMOUS')) in ('ANONYMOUS','NOBODY','PUBLIC_USER') then
       raise_application_error(-20300, 'An authenticated authorised reviewer is required.');
     end if;
 
@@ -573,9 +759,10 @@ create or replace package body afma_cm_evidence_api as
        and last_progress_at < systimestamp - numtodsinterval(7, 'MINUTE');
     commit;
 
-    select vs.analysis_run_id, mo.duration_seconds
-      into l_analysis_run_id, l_source_duration
+    select vs.analysis_run_id, ar.trip_id, mo.duration_seconds
+      into l_analysis_run_id, l_trip_id, l_source_duration
       from afma_cm_video_submissions vs
+      join afma_cm_analysis_runs ar on ar.analysis_run_id = vs.analysis_run_id
       join afma_cm_media_objects mo
         on mo.submission_id = vs.submission_id
        and mo.object_key = 'SOURCE'
@@ -594,23 +781,45 @@ create or replace package body afma_cm_evidence_api as
        and contract_status = 'ACTIVE';
 
     select count(*) into l_reviewed_count
-      from afma_cm_observations
-     where analysis_run_id = l_analysis_run_id
-       and reviewer_status <> 'NEEDS_REVIEW';
+      from afma_cm_observations o
+     where o.analysis_run_id = l_analysis_run_id
+       and o.superseded_at is null
+       and o.reviewer_status <> 'NEEDS_REVIEW'
+       and (
+         p_force_media_object_id is null
+         or o.evidence_run_id in (
+           select er.evidence_run_id
+             from afma_cm_evidence_runs er
+            where er.media_object_id = p_force_media_object_id
+         )
+         or (o.evidence_run_id is null and exists (
+           select 1
+             from afma_cm_media_objects tm
+            where tm.media_object_id = p_force_media_object_id
+              and o.start_second >= coalesce(tm.source_start_second, 0)
+              and o.start_second < coalesce(tm.source_end_second, tm.duration_seconds) + 0.001
+         ))
+       );
     if l_reviewed_count > 0 then
-      raise_application_error(-20301, 'This analysis already has officer decisions and cannot be replaced by a rerun.');
+      raise_application_error(-20301, case when p_force_media_object_id is null then 'This analysis already has officer decisions and cannot be replaced by a rerun.' else 'This segment contains an officer decision and cannot be replaced by fresh analysis.' end);
     end if;
 
-    delete from afma_cm_observations
-     where analysis_run_id = l_analysis_run_id
-       and reviewer_status = 'NEEDS_REVIEW';
+    if p_force_media_object_id is null then
+      delete from afma_cm_observations
+       where analysis_run_id = l_analysis_run_id
+         and superseded_at is null
+         and reviewer_status = 'NEEDS_REVIEW';
+    end if;
 
     select count(*)
       into l_clip_count
       from afma_cm_media_objects mo
      where mo.submission_id = p_submission_id
-       and mo.object_key like 'ANALYSIS_SEG_%';
-    if l_clip_count = 0 then
+       and mo.object_key like 'ANALYSIS_SEG_%'
+       and (p_force_media_object_id is null or mo.media_object_id = p_force_media_object_id);
+    if l_clip_count = 0 and p_force_media_object_id is not null then
+      raise_application_error(-20322, 'The requested analysis segment was not found for this submission.');
+    elsif l_clip_count = 0 then
       l_clip_count := 1;
     end if;
 
@@ -618,7 +827,7 @@ create or replace package body afma_cm_evidence_api as
        set processing_status = 'ANALYSING',
            processing_stage = 'GEMINI_ANALYSIS',
            progress_percent = 55,
-           processing_message = 'Gemini Pro is reviewing ' || l_clip_count || ' time-bounded visual-only analysis segment(s).',
+           processing_message = case when p_force_media_object_id is null then 'Gemini Pro is reviewing ' || l_clip_count || ' time-bounded visual-only analysis segment(s).' else 'Gemini Pro is performing fresh analysis of one reviewer-selected visual-only segment.' end,
            processing_started_at = coalesce(processing_started_at, systimestamp),
            processing_completed_at = null,
            worker_job_ref = 'EVIDENCE-' || lower(substr(rawtohex(sys_guid()), 1, 12)),
@@ -628,7 +837,7 @@ create or replace package body afma_cm_evidence_api as
     update afma_cm_analysis_runs
        set run_status = 'RUNNING',
            model_version = l_model_id,
-           run_notes = 'Segmented full-video visual-only Gemini evidence analysis is running under ' || l_prompt_version || '.'
+           run_notes = case when p_force_media_object_id is null then 'Segmented full-video visual-only Gemini evidence analysis is running under ' || l_prompt_version || '.' else 'Reviewer-selected segment reanalysis is running under unchanged active prompt ' || l_prompt_version || '.' end
      where analysis_run_id = l_analysis_run_id;
     commit;
 
@@ -636,6 +845,7 @@ create or replace package body afma_cm_evidence_api as
       select mo.*
         from afma_cm_media_objects mo
        where mo.submission_id = p_submission_id
+         and (p_force_media_object_id is null or mo.media_object_id = p_force_media_object_id)
          and (
            (exists (select 1 from afma_cm_media_objects sx where sx.submission_id = p_submission_id and sx.object_key like 'ANALYSIS_SEG_%') and mo.object_key like 'ANALYSIS_SEG_%')
            or
@@ -651,34 +861,48 @@ create or replace package body afma_cm_evidence_api as
       l_clip_no := l_clip_no + 1;
       l_clip_event_base := l_event_count;
       l_cached_response := false;
-      begin
-        select evidence_run_id, response_json
-          into l_evidence_run_id, l_response
-          from (
-            select evidence_run_id, response_json
-              from afma_cm_evidence_runs
-             where submission_id = p_submission_id
-               and media_object_id = m.media_object_id
-               and prompt_contract_id = l_prompt_id
-               and run_status = 'COMPLETE'
-               and validation_status = 'PASS'
-               and response_json is not null
-             order by evidence_run_id desc
-          )
-         where rownum = 1;
-        l_cached_response := true;
-      exception
-        when no_data_found then
-          l_cached_response := false;
-      end;
+      l_replaces_run_id := null;
+      if p_force_media_object_id is null then
+        begin
+          select evidence_run_id, response_json
+            into l_evidence_run_id, l_response
+            from (
+              select evidence_run_id, response_json
+                from afma_cm_evidence_runs
+               where submission_id = p_submission_id
+                 and media_object_id = m.media_object_id
+                 and prompt_contract_id = l_prompt_id
+                 and run_status = 'COMPLETE'
+                 and validation_status = 'PASS'
+                 and response_json is not null
+               order by evidence_run_id desc
+            )
+           where rownum = 1;
+          l_cached_response := true;
+        exception
+          when no_data_found then
+            l_cached_response := false;
+        end;
+      else
+        select max(evidence_run_id) keep (dense_rank last order by completed_at, evidence_run_id)
+          into l_replaces_run_id
+          from afma_cm_evidence_runs
+         where submission_id = p_submission_id
+           and media_object_id = m.media_object_id
+           and run_status = 'COMPLETE'
+           and validation_status = 'PASS';
+      end if;
 
       if not l_cached_response then
         insert into afma_cm_evidence_runs (
           submission_id, analysis_run_id, media_object_id, prompt_contract_id,
-          service_static_id, model_id, prompt_version, run_status
+          service_static_id, model_id, prompt_version, run_status,
+          run_purpose, replaces_evidence_run_id, reviewer_instruction
         ) values (
           p_submission_id, l_analysis_run_id, m.media_object_id, l_prompt_id,
-          l_service_id, l_model_id, l_prompt_version, 'RUNNING'
+          l_service_id, l_model_id, l_prompt_version, 'RUNNING',
+          case when p_force_media_object_id is null then 'INITIAL_ANALYSIS' else 'SEGMENT_REANALYSIS' end,
+          l_replaces_run_id, substr(trim(p_reviewer_instruction), 1, 1000)
         ) returning evidence_run_id into l_evidence_run_id;
 
         update afma_cm_video_submissions
@@ -726,7 +950,7 @@ create or replace package body afma_cm_evidence_api as
       l_metadata := l_root.get_object('source_metadata');
       l_events := l_root.get_array('events');
 
-      if l_clip_no = 1 then
+      if l_clip_no = 1 and p_force_media_object_id is null then
         l_meta_title := substr(l_metadata.get_string('title'), 1, 500);
         l_meta_description := substr(l_metadata.get_string('description'), 1, 2000);
         l_meta_region := substr(l_metadata.get_string('region_text'), 1, 500);
@@ -823,7 +1047,7 @@ create or replace package body afma_cm_evidence_api as
 
         l_spcode := caab_spcode(l_common_name, l_scientific_name);
         insert into afma_cm_observations (
-          analysis_run_id, observation_type, start_second, end_second,
+          analysis_run_id, evidence_run_id, observation_type, start_second, end_second,
           ai_taxon_text, ai_scientific_name, ai_spcode, ai_count,
           ai_count_basis, ai_count_lower_bound, ai_count_upper_bound, ai_count_scope,
           ai_event_granularity,
@@ -832,7 +1056,7 @@ create or replace package body afma_cm_evidence_api as
           evidence_text, ai_uncertainty, ai_size_value, ai_size_unit,
           ai_size_basis, ai_disposition, possible_duplicate_of_index, reviewer_status
         ) values (
-          l_analysis_run_id, l_event_type,
+          l_analysis_run_id, l_evidence_run_id, l_event_type,
           coalesce(m.source_start_second, 0) + l_start_second,
           coalesce(m.source_start_second, 0) + l_end_second,
           substr(coalesce(l_common_name, l_scientific_name, 'Unresolved'), 1, 300),
@@ -850,6 +1074,47 @@ create or replace package body afma_cm_evidence_api as
         );
         l_event_count := l_event_count + 1;
       end loop;
+
+      if p_force_media_object_id is not null then
+        update afma_cm_observations o
+           set o.superseded_at = systimestamp,
+               o.superseded_by_evidence_run_id = l_evidence_run_id,
+               o.reviewer_status = 'REJECTED',
+               o.reviewer_notes = substr('Superseded by fresh segment analysis run #' || l_evidence_run_id || '. The prior proposal and raw model response remain in the evidence-run audit.', 1, 2000),
+               o.reviewed_at = systimestamp,
+               o.reviewed_by = l_actor
+         where o.analysis_run_id = l_analysis_run_id
+           and o.superseded_at is null
+           and o.observation_id not in (
+             select n.observation_id
+               from afma_cm_observations n
+              where n.evidence_run_id = l_evidence_run_id
+           )
+           and (
+             o.evidence_run_id in (
+               select er.evidence_run_id
+                 from afma_cm_evidence_runs er
+                where er.media_object_id = m.media_object_id
+             )
+             or (o.evidence_run_id is null
+                 and o.start_second >= coalesce(m.source_start_second, 0)
+                 and o.start_second < coalesce(m.source_end_second, m.duration_seconds) + 0.001)
+           );
+
+        insert into afma_cm_audit_events (
+          trip_id, entity_type, entity_id, action_name, detail_text, occurred_by
+        ) values (
+          l_trip_id, 'MEDIA_SEGMENT', m.media_object_id, 'SEGMENT_REANALYSED',
+          substr('Fresh Gemini analysis run #' || l_evidence_run_id ||
+                 case when l_replaces_run_id is not null then ' superseded run #' || l_replaces_run_id end ||
+                 ' for source seconds ' || to_char(coalesce(m.source_start_second, 0)) || '–' ||
+                 to_char(coalesce(m.source_end_second, m.duration_seconds)) ||
+                 '. Active prompt remained ' || l_prompt_version ||
+                 case when trim(p_reviewer_instruction) is not null then '. Reviewer reason: ' || trim(p_reviewer_instruction) end,
+                 1, 2000),
+          l_actor
+        );
+      end if;
 
       update afma_cm_evidence_runs
          set run_status = 'COMPLETE',
@@ -884,6 +1149,12 @@ create or replace package body afma_cm_evidence_api as
       return;
     end if;
 
+    select count(*)
+      into l_current_event_count
+      from afma_cm_observations
+     where analysis_run_id = l_analysis_run_id
+       and superseded_at is null;
+
     update afma_cm_video_submissions
        set metadata_status = 'NEEDS_REVIEW',
            processing_stage = 'CAAB_MATCHING',
@@ -903,14 +1174,14 @@ create or replace package body afma_cm_evidence_api as
        set run_status = 'COMPLETE',
            model_version = l_model_id,
            completed_at = systimestamp,
-           run_notes = l_event_count || ' visual evidence event(s) proposed by ' || l_prompt_version || '; CAAB matching and deterministic validation passed. Officer review is required.'
+           run_notes = l_current_event_count || ' current visual evidence event(s) proposed by ' || l_prompt_version || '; CAAB matching and deterministic validation passed. Officer review is required.'
      where analysis_run_id = l_analysis_run_id;
 
     update afma_cm_video_submissions
        set processing_status = 'ANALYSIS_COMPLETE',
            processing_stage = 'READY_FOR_REVIEW',
            progress_percent = 100,
-           processing_message = l_event_count || ' proposed evidence event(s) passed deterministic checks and are ready for AFMA review. No event is confirmed automatically.',
+           processing_message = l_current_event_count || ' current proposed evidence event(s) passed deterministic checks and are ready for AFMA review. No event is confirmed automatically.',
            processing_completed_at = systimestamp,
            last_progress_at = systimestamp
      where submission_id = p_submission_id;
@@ -922,7 +1193,7 @@ create or replace package body afma_cm_evidence_api as
                                  trim(vs.submitted_description),
                                  trim(vs.ai_description_text),
                                  trim(vs.display_title)), ' .') ||
-                  '. Gemini Pro analysis completed: ' || l_event_count ||
+                  '. Gemini Pro analysis completed: ' || l_current_event_count ||
                   ' visual evidence event(s) were proposed for AFMA officer review.',
                   1,
                   2000
@@ -945,14 +1216,35 @@ create or replace package body afma_cm_evidence_api as
     when others then
       l_error := substr(sqlerrm || chr(10) || dbms_utility.format_error_backtrace, 1, 4000);
       if l_analysis_run_id is not null then
-        delete from afma_cm_observations
-         where analysis_run_id = l_analysis_run_id
-           and reviewer_status = 'NEEDS_REVIEW';
-        update afma_cm_analysis_runs
-           set run_status = 'FAILED',
-               completed_at = systimestamp,
-               run_notes = substr('Evidence analysis failed: ' || l_error, 1, 2000)
-         where analysis_run_id = l_analysis_run_id;
+        if p_force_media_object_id is not null then
+          delete from afma_cm_observations
+           where analysis_run_id = l_analysis_run_id
+             and evidence_run_id = l_evidence_run_id;
+          update afma_cm_observations
+             set superseded_at = null,
+                 superseded_by_evidence_run_id = null,
+                 reviewer_status = 'NEEDS_REVIEW',
+                 reviewer_notes = null,
+                 reviewed_at = null,
+                 reviewed_by = null
+           where analysis_run_id = l_analysis_run_id
+             and superseded_by_evidence_run_id = l_evidence_run_id;
+          update afma_cm_analysis_runs
+             set run_status = 'COMPLETE',
+                 completed_at = systimestamp,
+                 run_notes = substr('Fresh segment analysis failed; the prior current proposal remains available. ' || l_error, 1, 2000)
+           where analysis_run_id = l_analysis_run_id;
+        else
+          delete from afma_cm_observations
+           where analysis_run_id = l_analysis_run_id
+             and superseded_at is null
+             and reviewer_status = 'NEEDS_REVIEW';
+          update afma_cm_analysis_runs
+             set run_status = 'FAILED',
+                 completed_at = systimestamp,
+                 run_notes = substr('Evidence analysis failed: ' || l_error, 1, 2000)
+           where analysis_run_id = l_analysis_run_id;
+        end if;
       end if;
       update afma_cm_evidence_runs
          set run_status = 'FAILED',
@@ -960,11 +1252,15 @@ create or replace package body afma_cm_evidence_api as
              validation_issues = l_error,
              completed_at = systimestamp
        where submission_id = p_submission_id
-         and run_status = 'RUNNING';
+         and ((p_force_media_object_id is not null and evidence_run_id = l_evidence_run_id)
+              or (p_force_media_object_id is null and run_status = 'RUNNING'));
       update afma_cm_video_submissions
-         set processing_status = 'ANALYSIS_FAILED',
-             processing_stage = 'ANALYSIS_FAILED',
+         set processing_status = case when p_force_media_object_id is not null then 'ANALYSIS_COMPLETE' else 'ANALYSIS_FAILED' end,
+             processing_stage = case when p_force_media_object_id is not null then 'READY_FOR_REVIEW' else 'ANALYSIS_FAILED' end,
+             progress_percent = case when p_force_media_object_id is not null then 100 else progress_percent end,
              processing_message = case
+               when p_force_media_object_id is not null then
+                 'Fresh segment analysis failed; the prior current proposal remains available. Technical details are retained in the evidence-run audit.'
                when instr(l_error, 'ORA-20959') > 0 then
                  'Gemini Pro did not complete the current video segment. No review events were published. Retry after reviewing the prompt or use shorter analysis segments; technical details are retained in the evidence-run audit.'
                else
@@ -976,6 +1272,19 @@ create or replace package body afma_cm_evidence_api as
       commit;
       raise;
   end run_submission;
+
+  procedure rerun_segment(
+    p_submission_id        in number,
+    p_media_object_id      in number,
+    p_reviewer_instruction in varchar2 default null
+  ) is
+  begin
+    run_submission(
+      p_submission_id          => p_submission_id,
+      p_force_media_object_id  => p_media_object_id,
+      p_reviewer_instruction   => p_reviewer_instruction
+    );
+  end rerun_segment;
 
   procedure approve_and_run(
     p_submission_id      in number,
@@ -1013,7 +1322,8 @@ update afma_cm_trips t
               '. Gemini Pro analysis completed: ' ||
               (select count(*)
                  from afma_cm_observations o
-                where o.analysis_run_id = vs.analysis_run_id) ||
+                where o.analysis_run_id = vs.analysis_run_id
+                  and o.superseded_at is null) ||
               ' visual evidence event(s) were proposed for AFMA officer review.',
               1,
               2000
@@ -1043,6 +1353,18 @@ comment on column afma_cm_observations.ai_count_basis is 'Visual count basis: EX
 comment on column afma_cm_observations.ai_count_scope is 'NEW_CATCHES, VISIBLE_ACCUMULATION or WILDLIFE. Visible accumulation is excluded from new-catch reconciliation totals.';
 /
 comment on column afma_cm_observations.ai_event_granularity is 'INDIVIDUAL or BATCH visual evidence grouping proposed by the model.';
+/
+comment on column afma_cm_observations.evidence_run_id is 'Gemini evidence run that proposed this observation; supports segment-level reanalysis audit.';
+/
+comment on column afma_cm_observations.superseded_at is 'When populated, the proposal was replaced by a later segment reanalysis and is retained only for audit.';
+/
+comment on column afma_cm_observations.superseded_by_evidence_run_id is 'Evidence run that replaced this proposal during audited segment reanalysis.';
+/
+comment on column afma_cm_evidence_runs.run_purpose is 'INITIAL_ANALYSIS or reviewer-requested SEGMENT_REANALYSIS.';
+/
+comment on column afma_cm_evidence_runs.replaces_evidence_run_id is 'Prior completed evidence run retained when this fresh segment analysis was requested.';
+/
+comment on column afma_cm_evidence_runs.reviewer_instruction is 'Reviewer-provided reason or instruction recorded for a segment reanalysis.';
 /
 
 prompt AFMA 118 complete

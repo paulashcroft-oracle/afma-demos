@@ -1,0 +1,37 @@
+page 1 (
+    name: Home
+    alias: HOME
+    title: AFMA CAAB AI Demo
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region afma-caab-home (
+        name: AFMA CAAB Home
+        type: dynamicContent
+        source {
+            plsqlFunctionBody: return csiro_caab_page_api.home_html;
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        advanced {
+            htmlDomId: afma-caab-home
+        }
+    )
+
+)
+

@@ -32,6 +32,14 @@ union all
 select 'OBSERVATIONS', count(*)
   from afma_cm_observations
 union all
+select 'CURRENT_OBSERVATIONS', count(*)
+  from afma_cm_observations
+ where superseded_at is null
+union all
+select 'SUPERSEDED_OBSERVATIONS', count(*)
+  from afma_cm_observations
+ where superseded_at is not null
+union all
 select 'VIDEO_SUBMISSIONS', count(*)
   from afma_cm_video_submissions
 union all
@@ -243,10 +251,36 @@ select count(*) invalid_batch_count_contracts
     or (o.observation_type = 'CATCH' and o.ai_count_scope = 'WILDLIFE');
 
 select count(*) model_published_non_review_rows
-  from afma_cm_observations o
+ from afma_cm_observations o
   join afma_cm_analysis_runs ar on ar.analysis_run_id = o.analysis_run_id
  where ar.analysis_mode = 'APEX_GEMINI_PRO'
+   and o.superseded_at is null
    and o.reviewer_status <> 'NEEDS_REVIEW';
+
+select er.evidence_run_id,
+       er.replaces_evidence_run_id,
+       vs.submission_ref,
+       mo.object_key,
+       er.run_purpose,
+       er.prompt_version,
+       er.run_status,
+       er.validation_status,
+       er.proposed_event_count,
+       er.reviewer_instruction,
+       er.started_at,
+       er.completed_at
+  from afma_cm_evidence_runs er
+  join afma_cm_video_submissions vs on vs.submission_id = er.submission_id
+  join afma_cm_media_objects mo on mo.media_object_id = er.media_object_id
+ where er.run_purpose = 'SEGMENT_REANALYSIS'
+    or er.replaces_evidence_run_id is not null
+ order by er.evidence_run_id desc;
+
+select count(*) invalid_supersession_links
+  from afma_cm_observations o
+ where (o.superseded_at is null and o.superseded_by_evidence_run_id is not null)
+    or (o.superseded_at is not null and o.superseded_by_evidence_run_id is null)
+    or (o.evidence_run_id is null and o.superseded_at is not null);
 
 select vs.submission_ref,
        count(*) segment_count,

@@ -96,6 +96,7 @@ create or replace package body afma_cm_page_api as
     l_report_status varchar2(30);
     l_source_type varchar2(30);
     l_run_id number;
+    l_submission_id number;
     l_analysis_mode varchar2(40);
     l_model_version varchar2(200);
     l_manifest varchar2(200);
@@ -109,6 +110,7 @@ create or replace package body afma_cm_page_api as
     l_annotation_status varchar2(60);
     l_stored_media_count number := 0;
     l_public_youtube_embed_yn varchar2(1) := 'N';
+    l_segment_count number := 0;
     l_open_count number := 0;
     l_asset_count number := 0;
     l_gap_count number := 0;
@@ -192,7 +194,22 @@ create or replace package body afma_cm_page_api as
            count(*)
       into l_open_count, l_video_count
       from afma_cm_observations
-     where analysis_run_id = l_run_id;
+     where analysis_run_id = l_run_id
+       and superseded_at is null;
+
+    select max(submission_id)
+      into l_submission_id
+      from afma_cm_video_submissions
+     where analysis_run_id = l_run_id
+       and processing_status <> 'DELETED';
+
+    if l_submission_id is not null then
+      select count(*)
+        into l_segment_count
+        from afma_cm_media_objects
+       where submission_id = l_submission_id
+         and object_key like 'ANALYSIS_SEG_%';
+    end if;
 
     select count(*)
       into l_stored_media_count
@@ -253,6 +270,7 @@ create or replace package body afma_cm_page_api as
 .cm-btn{border:1px solid #b8cbd4;background:white;color:#12364c;border-radius:7px;padding:.48rem .68rem;font-weight:800;cursor:pointer}.cm-btn:hover{background:#f1f7f9}.cm-btn-primary{background:#007d78;border-color:#007d78;color:white}.cm-btn-danger{border-color:#e1b1b1;color:#a32929}.cm-btn:disabled{opacity:.48;cursor:not-allowed}.cm-actions{display:flex;gap:.45rem;flex-wrap:wrap}.cm-form{display:grid;grid-template-columns:2fr .7fr .8fr 1fr auto;gap:.55rem;align-items:end;margin-top:.8rem;padding:.8rem;background:#f4f8fa;border:1px solid #d7e1e7;border-radius:8px}.cm-field label{display:block;font-size:.7rem;font-weight:850;text-transform:uppercase;color:#5d6c76;margin-bottom:.25rem}.cm-field input,.cm-field select,.cm-review select,.cm-review input{width:100%;border:1px solid #b9cbd4;border-radius:6px;padding:.48rem;background:white}.cm-events{display:grid;gap:.65rem}.cm-event{border:1px solid #d7e1e7;border-left:5px solid #0c6e9d;border-radius:8px;padding:.75rem}.cm-event-wildlife{border-left-color:#9a6200}.cm-event__top{display:flex;justify-content:space-between;gap:.7rem}.cm-event h3{margin:0;font-size:.95rem;color:#12364c}.cm-event p{margin:.35rem 0;color:#5d6c76;font-size:.84rem;line-height:1.4}.cm-review{display:grid;grid-template-columns:1.2fr .55fr 1fr auto;gap:.45rem;margin-top:.6rem;align-items:end}.cm-review label{font-size:.68rem;color:#5d6c76;text-transform:uppercase;font-weight:800}.cm-section-title{display:flex;justify-content:space-between;align-items:center;gap:.7rem;margin:.1rem 0 .7rem}.cm-section-title h2{margin:0;color:#12364c;font-size:1.25rem}.cm-media-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}.cm-media{border:1px solid #d7e1e7;border-radius:8px;padding:.75rem}.cm-media h3{margin:.2rem 0 .3rem;font-size:.92rem;color:#12364c}.cm-media p{margin:.25rem 0;color:#5d6c76;font-size:.8rem;line-height:1.4}.cm-link{color:#0c6e9d;font-weight:750}.cm-guidance{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem}.cm-guidance a{display:block;border:1px solid #d7e1e7;border-radius:8px;padding:.7rem;text-decoration:none;color:#12364c;font-weight:800;background:#fff}.cm-guidance small{display:block;color:#5d6c76;font-weight:400;margin-top:.2rem}.cm-footnote{font-size:.78rem;color:#5d6c76;line-height:1.45}.cm-loading{opacity:.56;pointer-events:none}
 @media(max-width:920px){.cm-disclosure{grid-template-columns:1fr 1fr}.cm-selector,.cm-grid,.cm-metadata__body{grid-template-columns:1fr}.cm-stats{grid-template-columns:repeat(2,1fr)}.cm-media-grid,.cm-guidance{grid-template-columns:1fr}.cm-form,.cm-review{grid-template-columns:1fr 1fr}.cm-form .cm-field:first-child,.cm-review .cm-field:first-child{grid-column:1/-1}}
 .cm-intake>summary{cursor:pointer;list-style:none}.cm-intake>summary::-webkit-details-marker{display:none}.cm-intake>summary .cm-intake__toggle{font-weight:850;color:#0c6e9d;white-space:nowrap}.cm-intake[open]>summary{border-bottom:1px solid #d7e1e7}.cm-video-placeholder{display:grid;place-items:center;min-height:18rem;padding:2rem;text-align:center;border:2px dashed #b9cbd4;border-radius:8px;background:#f4f8fa;color:#526672}.cm-video-placeholder strong{display:block;color:#12364c;font-size:1.05rem;margin-bottom:.35rem}
+.cm-segments{margin-top:.8rem;border:1px solid #d7e1e7;border-radius:8px;overflow:hidden}.cm-segments>summary{cursor:pointer;padding:.7rem .8rem;background:#f4f8fa;color:#12364c;font-weight:850}.cm-segments .cm-table td,.cm-segments .cm-table th{padding:.5rem .6rem}.cm-segments__actions{white-space:nowrap}.cm-segments__note{padding:.55rem .7rem;margin:0;border-top:1px solid #d7e1e7;background:#fbfdfe}
 .cm-clearance{background:#fff;border:1px solid #cbdbe3;border-radius:10px;box-shadow:0 8px 24px rgba(18,54,76,.06);overflow:hidden}.cm-clearance__head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;padding:.9rem 1rem;border-bottom:1px solid #d7e1e7;background:#fbfdfe}.cm-clearance__head h2{margin:0;color:#12364c;font-size:1.08rem}.cm-clearance__head p{margin:.2rem 0 0;color:#5d6c76;font-size:.83rem;line-height:1.4}.cm-progress{display:grid;grid-template-columns:minmax(10rem,1fr) 3rem;gap:.55rem;align-items:center;min-width:14rem}.cm-progress__track{height:.65rem;border-radius:999px;background:#dfe9ee;overflow:hidden}.cm-progress__fill{display:block;height:100%;background:linear-gradient(90deg,#0c6e9d,#007d78);border-radius:inherit}.cm-progress strong{font-size:.78rem;color:#12364c;text-align:right}.cm-stage-note{max-width:34rem}.cm-clearance__empty{padding:1rem;color:#526672}.cm-nowrap{white-space:nowrap}
 .cm-steps-row[hidden]{display:none}.cm-steps-row td{background:#f7fbfc;padding:.8rem 1rem}.cm-steps{display:grid;grid-template-columns:repeat(6,minmax(8rem,1fr));gap:.45rem}.cm-step{border:1px solid #d7e1e7;border-radius:7px;padding:.55rem;background:#fff;color:#5d6c76;font-size:.74rem}.cm-step strong{display:block;color:#12364c;margin-bottom:.18rem}.cm-step--done{border-color:#9fcbb0;background:#eff9f2}.cm-step--current{border-color:#e0a22f;background:#fff8e7}.cm-next-action{display:grid;gap:.4rem;min-width:10rem}.cm-next-action .cm-btn{justify-content:center}.cm-analysis-note{margin-top:.45rem;color:#5d6c76;font-size:.74rem;line-height:1.35}.cm-link-button{border:0;background:transparent;color:#006b9c;text-decoration:underline;cursor:pointer;padding:0;font:inherit;font-weight:800}
 @media(max-width:1100px){.cm-steps{grid-template-columns:repeat(3,minmax(9rem,1fr))}}
@@ -462,7 +480,38 @@ create or replace package body afma_cm_page_api as
     if l_public_youtube_embed_yn = 'Y' then
       add_line(l_html, '<p class="cm-footnote"><strong>Playback:</strong> This player loads the public source from YouTube/Google, which may receive normal browser and connection information. ' || case when l_stored_media_count > 0 then 'Gemini analysis used the stored video-only copy retained in AIDEMODB, not the embedded playback stream.' else 'This curated scenario is reviewed against the public source.' end || '</p>');
     end if;
-    add_line(l_html, '<p class="cm-footnote"><strong>Evidence status:</strong> ' || h(l_run_notes) || '</p></div></section>');
+    add_line(l_html, '<p class="cm-footnote"><strong>Evidence status:</strong> ' || h(l_run_notes) || '</p>');
+    if l_segment_count > 0 then
+      add_line(l_html, '<details class="cm-segments"><summary>Analysis segments (' || l_segment_count || ') — inspect or request fresh analysis</summary><div class="cm-table-wrap"><table class="cm-table"><thead><tr><th>Segment</th><th>Stored rendition</th><th>Latest run</th><th>Result</th><th>Action</th></tr></thead><tbody>');
+      for sg in (
+        select mo.media_object_id,
+               mo.object_key,
+               mo.source_start_second,
+               mo.source_end_second,
+               mo.original_filename filename,
+               case when mo.content_blob is null then 0 else dbms_lob.getlength(mo.content_blob) end stored_blob_bytes,
+               er.evidence_run_id,
+               er.prompt_version,
+               er.run_status,
+               er.validation_status,
+               er.proposed_event_count,
+               er.run_purpose
+          from afma_cm_media_objects mo
+          left join afma_cm_evidence_runs er
+            on er.evidence_run_id = (
+              select max(x.evidence_run_id)
+                from afma_cm_evidence_runs x
+               where x.media_object_id = mo.media_object_id
+            )
+         where mo.submission_id = l_submission_id
+           and mo.object_key like 'ANALYSIS_SEG_%'
+         order by mo.source_start_second, mo.media_object_id
+      ) loop
+        add_line(l_html, '<tr><td><strong>' || h(fmt_range(sg.source_start_second, sg.source_end_second)) || '</strong><small>' || h(sg.object_key) || '</small></td><td>' || h(sg.filename) || '<small>' || case when sg.stored_blob_bytes > 0 then h(to_char(sg.stored_blob_bytes)) || ' stored bytes' else 'Rendition bytes released after the original run' end || '</small></td><td>' || case when sg.evidence_run_id is null then 'Not analysed' else '#' || sg.evidence_run_id || '<small>' || h(sg.prompt_version) || ' · ' || h(sg.run_purpose) || '</small>' end || '</td><td><span class="cm-badge ' || badge_class(case when sg.run_status = 'COMPLETE' and sg.validation_status = 'PASS' then 'CONFIRMED' when sg.run_status = 'FAILED' then 'REJECTED' else 'NEEDS_REVIEW' end) || '">' || h(coalesce(sg.run_status, 'NOT_STARTED')) || '</span><small>' || h(coalesce(to_char(sg.proposed_event_count), '0')) || ' proposed event(s)</small></td><td class="cm-segments__actions"><button class="cm-btn cm-rerun-segment" data-submission-id="' || l_submission_id || '" data-media-object-id="' || sg.media_object_id || '" data-range="' || a(fmt_range(sg.source_start_second, sg.source_end_second)) || '"' || case when sg.stored_blob_bytes = 0 then ' disabled title="Restore this bounded rendition from the retained source before requesting fresh analysis."' end || '>' || case when sg.stored_blob_bytes > 0 then 'Fresh analysis' else 'Restore required' end || '</button></td></tr>');
+      end loop;
+      add_line(l_html, '</tbody></table></div><p class="cm-footnote cm-segments__note">Fresh analysis uses the currently active governed prompt unchanged. The prior raw response and proposal remain available as superseded audit evidence. This quota-constrained demo may release completed rendition bytes; restore regenerates the bounded rendition from the retained source, while production should use object-storage lifecycle and a media worker.</p></details>');
+    end if;
+    add_line(l_html, '</div></section>');
 
     add_line(l_html, '<section class="cm-card"><div class="cm-card__head"><div><h2>Review queue</h2><p>Confirm, correct, reject or escalate each proposed event.</p></div><span class="cm-badge ' || badge_class(case when l_open_count = 0 then 'CONFIRMED' else 'NEEDS_REVIEW' end) || '">' || l_open_count || ' unresolved</span></div><div class="cm-card__body"><div class="cm-events">');
     if l_video_count = 0 then
@@ -476,6 +525,7 @@ create or replace package body afma_cm_page_api as
         from afma_cm_observations o
         left join csiro_caab_taxa t on t.spcode = coalesce(o.reviewed_spcode, o.ai_spcode)
        where o.analysis_run_id = l_run_id
+         and o.superseded_at is null
        order by o.start_second, o.observation_id
     ) loop
       add_line(l_html, '<article class="cm-event ' || case when o.observation_type = 'WILDLIFE' then 'cm-event-wildlife' end || '" data-observation-id="' || o.observation_id || '"><div class="cm-event__top"><div><h3>' || fmt_range(o.start_second, o.end_second) || ' · ' || h(replace(initcap(o.observation_type), '_', ' ')) || ' · ' || h(o.display_name) || '</h3><div><span class="cm-spcode">' || h(coalesce(o.taxon_spcode, 'CAAB unresolved')) || '</span> · confidence ' || to_char(o.ai_confidence * 100, 'FM990') || '% · proposed count ' || h(to_char(o.ai_count)) || case when o.ai_count_basis is not null then ' · ' || h(replace(initcap(o.ai_count_basis), '_', ' ')) || case when o.ai_count_upper_bound is not null and o.ai_count_upper_bound <> o.ai_count_lower_bound then ' (' || h(to_char(o.ai_count_lower_bound)) || '–' || h(to_char(o.ai_count_upper_bound)) || ')' end end || '</div></div><span class="cm-badge ' || badge_class(o.reviewer_status) || '">' || h(o.reviewer_status) || '</span></div>');
@@ -594,6 +644,7 @@ create or replace package body afma_cm_page_api as
         into l_video_count
         from afma_cm_observations o
        where o.analysis_run_id = l_run_id
+         and o.superseded_at is null
          and o.observation_type = 'CATCH'
          and coalesce(o.reviewed_spcode, o.ai_spcode, '~') = coalesce(r.spcode, '~');
       if l_open_count > 0 then
@@ -654,6 +705,7 @@ create or replace package body afma_cm_page_api as
   shell.querySelectorAll(".cm-toggle-steps").forEach(function(button){button.addEventListener("click",function(){var row=document.getElementById(button.getAttribute("data-target")),show=row.hasAttribute("hidden");if(show){row.removeAttribute("hidden");}else{row.setAttribute("hidden","");}button.setAttribute("aria-expanded",show?"true":"false");button.textContent=show?"Hide steps":"View steps";});});
   shell.querySelectorAll(".cm-view-evidence-prompt").forEach(function(button){button.addEventListener("click",function(){var intake=shell.querySelector(".cm-intake"),prompt=document.getElementById("cmEvidencePromptReview");if(intake){intake.open=true;}if(prompt){prompt.open=true;prompt.scrollIntoView({behavior:"smooth",block:"start"});}});});
   shell.querySelectorAll(".cm-run-evidence").forEach(function(button){button.addEventListener("click",function(){runEvidence(button);});});
+  shell.querySelectorAll(".cm-rerun-segment").forEach(function(button){button.addEventListener("click",function(){var range=button.getAttribute("data-range");apex.message.confirm("Request fresh Gemini analysis for segment "+range+"? The active governed prompt will be used unchanged, and the prior result will be retained for audit.",function(ok){if(!ok){return;}var original=button.textContent;button.disabled=true;button.textContent="Reanalysing…";button.setAttribute("aria-busy","true");apex.server.process("AFMA_CM_EVIDENCE_ACTION",{x01:"RERUN_SEGMENT",x02:button.getAttribute("data-submission-id"),x03:button.getAttribute("data-media-object-id"),x04:"Reviewer requested fresh segment analysis after visual discrepancy review."},{dataType:"json"}).then(function(r){if(!r||!r.success){throw new Error((r&&r.message)||"Segment analysis failed");}reloadCommitted();}).catch(function(e){button.disabled=false;button.textContent=original;button.removeAttribute("aria-busy");apex.message.alert(e&&e.message?e.message:String(e));});});});});
   shell.querySelectorAll(".cm-open-review").forEach(function(button){button.addEventListener("click",function(){window.location.href=new URL(button.getAttribute("data-url"),document.baseURI).href;});});
   var registerUrl=document.getElementById("cmRegisterUrl");if(registerUrl){registerUrl.addEventListener("click",function(){var title=val("P4_VIDEO_TITLE").trim(),url=val("P4_VIDEO_URL").trim();if(!url){apex.message.alert("Enter an HTTPS video or video-page URL.");return;}runIntake("STAGE_URL",{x02:title,x03:url,x04:val("P4_VIDEO_DESCRIPTION"),x05:val("P4_RIGHTS_ACK"),x06:val("P4_HANDLING_ACK")});});}
   var uploadVideo=document.getElementById("cmUploadVideo"),uploadProgress=document.getElementById("cmUploadProgress");if(uploadVideo){uploadVideo.addEventListener("click",function(){var file=chosenVideoFile();if(!file){apex.message.alert("Choose a video file.");return;}if(val("P4_RIGHTS_ACK")!=="Y"||val("P4_HANDLING_ACK")!=="Y"){apex.message.alert("Confirm both authority and data-handling acknowledgements.");return;}if(file.size>36700160){apex.message.alert("The current direct-analysis limit is 35 MiB. Use a shorter clip or register an HTTPS URL.");return;}uploadInChunks(file,uploadVideo,uploadProgress);});}
