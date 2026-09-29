@@ -827,8 +827,8 @@ create or replace package body afma_cm_evidence_api as
               and o.start_second < coalesce(tm.source_end_second, tm.duration_seconds) + 0.001
          ))
        );
-    if l_reviewed_count > 0 then
-      raise_application_error(-20301, case when p_force_media_object_id is null then 'This analysis already has officer decisions and cannot be replaced by a rerun.' else 'This segment contains an officer decision and cannot be replaced by fresh analysis.' end);
+    if l_reviewed_count > 0 and p_force_media_object_id is null then
+      raise_application_error(-20301, 'This analysis already has officer decisions and cannot be replaced by a full automatic rerun. Use reviewer-guided segment re-analysis so each human decision remains preserved.');
     end if;
 
     if p_force_media_object_id is null then
@@ -1120,6 +1120,7 @@ create or replace package body afma_cm_evidence_api as
                o.reviewed_by = l_actor
          where o.analysis_run_id = l_analysis_run_id
            and o.superseded_at is null
+           and o.reviewer_status = 'NEEDS_REVIEW'
            and o.observation_id not in (
              select n.observation_id
                from afma_cm_observations n
@@ -1145,6 +1146,7 @@ create or replace package body afma_cm_evidence_api as
                  ' for source seconds ' || to_char(coalesce(m.source_start_second, 0)) || '–' ||
                  to_char(coalesce(m.source_end_second, m.duration_seconds)) ||
                  '. Active prompt remained ' || l_prompt_version ||
+                 case when l_reviewed_count > 0 then '. Existing officer-reviewed observations in this segment were preserved; new AI proposals require separate review' end ||
                  case when trim(p_reviewer_instruction) is not null then '. Reviewer reason: ' || trim(p_reviewer_instruction) end,
                  1, 2000),
           l_actor
