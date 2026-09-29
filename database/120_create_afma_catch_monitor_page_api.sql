@@ -524,12 +524,17 @@ create or replace package body afma_cm_page_api as
     end if;
     for o in (
       select o.*,
-             er.media_object_id,
+             (select max(mo.media_object_id) keep (dense_rank first order by mo.source_start_second desc, mo.media_object_id desc)
+                from afma_cm_media_objects mo
+               where mo.submission_id = l_submission_id
+                 and mo.object_key like 'ANALYSIS_SEG_%'
+                 and dbms_lob.getlength(mo.content_blob) > 0
+                 and o.start_second >= mo.source_start_second
+                 and o.start_second < mo.source_end_second) media_object_id,
              coalesce(t.common_name, t.scientific_name, o.ai_taxon_text, 'Unresolved') display_name,
              t.scientific_name,
              t.spcode taxon_spcode
         from afma_cm_observations o
-        left join afma_cm_evidence_runs er on er.evidence_run_id = o.evidence_run_id
         left join csiro_caab_taxa t on t.spcode = coalesce(o.reviewed_spcode, o.ai_spcode)
        where o.analysis_run_id = l_run_id
          and o.superseded_at is null
