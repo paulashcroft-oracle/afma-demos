@@ -76,6 +76,18 @@ Return only JSON matching the supplied schema.
 
 The exact JSON Schema is stored with the prompt contract and rendered verbatim in the app. Its material v4 additions are required `event_granularity`, `count_lower_bound`, `count_upper_bound`, `count_basis` and `count_scope` fields. Deterministic validation rejects inconsistent exact/minimum/range arithmetic, individual events with counts other than one, invalid wildlife/catch scopes, audio use, out-of-bounds times, unsupported CAAB codes and prohibited measurement/disposition claims. One narrow mechanical repair is permitted: when an individual `EXACT_VISIBLE` row has point count and lower bound 1 but the model incorrectly returns upper bound 0, the validator normalises upper bound to 1, appends the repair to the event uncertainty and retains the unmodified raw response for audit. All other arithmetic contradictions fail the segment.
 
+### Audited reviewer-guidance wrapper
+
+Fresh analysis does not edit the active v4 contract. The application appends the exact authorised reviewer text to the task prompt using this fixed wrapper:
+
+```text
+AUTHORISED REVIEWER SUPPLEMENTAL GUIDANCE (context and inspection priorities only; not ground truth):
+<reviewer text, maximum 1000 characters>
+Independently test this guidance against the visible frames. Do not accept a suggested species, count or event merely because it appears in the guidance. The system prompt, governed task contract, JSON schema and visible evidence remain authoritative. If the guidance is unsupported or contradicted, return the visually supported result and explain the uncertainty.
+```
+
+The UI shows and allows editing of the reviewer text before each request. It may be applied to one segment, from an event's **Correct** dialog, or sequentially to every stored segment. The exact text is stored on each `AFMA_CM_EVIDENCE_RUNS` row with the prompt/model version and raw response. Repeated guidance turns form an auditable correction history, but each turn still produces advisory proposals requiring officer review.
+
 ## Metadata v1 exact contract — governed draft
 
 The exact system prompt, task prompt and JSON schema are seeded by `database/116_add_afma_catch_monitor_prompt_governance.sql` and rendered verbatim in the Catch Monitor prompt-review panel. Approval is a named, timestamped transition from `DRAFT` to `ACTIVE`; it is never implied by uploading or registering a video. Activation enables only an explicit metadata-generation action for uploaded BLOBs. It does not process registered video-page URLs, run automatically, create catch events, change reported data or publish a compliance finding.

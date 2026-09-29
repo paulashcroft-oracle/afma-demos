@@ -306,4 +306,17 @@ select count(*) youtube_playback_package_line_count
    and type = 'PACKAGE BODY'
    and text like '%youtube-nocookie%';
 
+select count(*) reviewer_guidance_prompt_line_count
+  from user_source
+ where name = 'AFMA_CM_EVIDENCE_API'
+   and type = 'PACKAGE BODY'
+   and text like '%AUTHORISED REVIEWER SUPPLEMENTAL GUIDANCE%';
+
+select count(*) prompted_full_reanalysis_ui_line_count
+  from user_source
+ where name = 'AFMA_CM_PAGE_API'
+   and type = 'PACKAGE BODY'
+   and (text like '%cmRerunAllSegments%'
+        or text like '%cmAiCorrectionAll%');
+
 prompt AFMA 130 complete
