@@ -47,7 +47,19 @@ select 'PROMPT_CONTRACTS', count(*)
   from afma_cm_prompt_contracts
 union all
 select 'AUDIT_EVENTS', count(*)
-  from afma_cm_audit_events;
+  from afma_cm_audit_events
+union all
+select 'REVIEW_SESSIONS', count(*)
+  from afma_cm_review_sessions
+union all
+select 'REVIEW_MESSAGES', count(*)
+  from afma_cm_review_messages
+union all
+select 'REVIEW_TOOL_RUNS', count(*)
+  from afma_cm_review_tool_runs
+union all
+select 'REVIEW_PROPOSALS', count(*)
+  from afma_cm_review_proposals;
 
 select trip_ref,
        source_type,
@@ -318,5 +330,42 @@ select count(*) prompted_full_reanalysis_ui_line_count
    and type = 'PACKAGE BODY'
    and (text like '%cmRerunAllSegments%'
         or text like '%cmAiCorrectionAll%');
+
+select count(*) review_studio_package_line_count
+  from user_source
+ where name = 'AFMA_CM_PAGE_API'
+   and type = 'PACKAGE BODY'
+   and text like '%cmReviewStudioDialog%';
+
+select count(*) review_agent_tool_contract_count
+  from user_source
+ where name = 'AFMA_CM_REVIEW_AGENT_API'
+   and type = 'PACKAGE BODY'
+   and (text like '%get_review_context%'
+        or text like '%inspect_stored_segment%'
+        or text like '%lookup_caab_candidates%'
+        or text like '%create_corrected_proposal%');
+
+select count(*) review_studio_ajax_process_count
+  from apex_application_page_proc
+ where application_id = 101
+   and page_id = 4
+   and process_name = 'AFMA_CM_EVIDENCE_ACTION'
+   and dbms_lob.instr(process_source, 'OPEN_REVIEW_SESSION') > 0
+   and dbms_lob.instr(process_source, 'SEND_REVIEW_MESSAGE') > 0
+   and dbms_lob.instr(process_source, 'ACCEPT_REVIEW_PROPOSAL') > 0;
+
+select rs.review_session_id,
+       rs.session_status,
+       rs.observation_id,
+       count(distinct rm.review_message_id) message_count,
+       count(distinct tr.tool_run_id) tool_run_count,
+       count(distinct rp.review_proposal_id) proposal_count
+  from afma_cm_review_sessions rs
+  left join afma_cm_review_messages rm on rm.review_session_id = rs.review_session_id
+  left join afma_cm_review_tool_runs tr on tr.review_session_id = rs.review_session_id
+  left join afma_cm_review_proposals rp on rp.review_session_id = rs.review_session_id
+ group by rs.review_session_id, rs.session_status, rs.observation_id
+ order by rs.review_session_id desc;
 
 prompt AFMA 130 complete

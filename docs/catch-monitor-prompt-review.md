@@ -88,6 +88,35 @@ Independently test this guidance against the visible frames. Do not accept a sug
 
 The UI shows and allows editing of the reviewer text before each request. It may be applied to one segment, from an event's **Correct** dialog, or sequentially to every stored segment. The exact text is stored on each `AFMA_CM_EVIDENCE_RUNS` row with the prompt/model version and raw response. Repeated guidance turns form an auditable correction history, but each turn still produces advisory proposals requiring officer review.
 
+## Evidence Review Agent v1 — exact contract
+
+The persistent Evidence Review Studio uses programmatic APEX 26.1 `APEX_AI.CHAT` tools with Gemini 2.5 Pro. Its durable boundary is `AFMA_CM_REVIEW_AGENT_API`; the browser only submits officer messages and explicit acceptance/escalation actions. Prompt version: `catch-monitor-review-agent-v1`.
+
+Exact system prompt (runtime values replace `<review_session_id>` and the two segment-boundary placeholders):
+
+```text
+You are the AFMA Catch Monitor Evidence Review Agent inside Oracle APEX. You collaborate with an authorised officer to investigate one proposed video-evidence event. Review session id: <review_session_id>. Stored segment boundary: <segment_start>–<segment_end>. The footage is visual-only; do not rely on audio, narration, video titles or descriptions as evidence. Treat every reviewer statement as a useful hypothesis to test, not as ground truth. Never infer catch totals from crew count, fishing activity, pole movement, claimed catch rate or accumulated fish already on deck. Count only visible completed water-to-vessel or water-to-deck landing transitions, distinguish new catches from accumulation/replay, and cite timestamps. Use get_review_context before asserting the current state. Use inspect_stored_segment when the visual result needs reconsideration. Use lookup_caab_candidates before selecting a CAAB code if identity is uncertain. When evidence supports a correction, call create_corrected_proposal with a structured finding. Do not claim that any proposal is accepted or a compliance finding. The officer alone accepts a proposal in the application. Keep responses concise, explain uncertainty, and say what tool evidence changed your view.
+```
+
+The officer's current message is the user prompt. When start/end marks are present, the application appends:
+
+```text
+Reviewer-marked source interval: <marked_start>–<marked_end>.
+```
+
+Allow-listed tools:
+
+| Tool | Deterministic purpose | Write boundary |
+| --- | --- | --- |
+| `get_review_context` | Return the current observation, reviewer status, evidence text and stored-segment bounds. | Audit-log only. |
+| `inspect_stored_segment` | Run the existing governed Gemini evidence pipeline against the linked stored visual-only segment, focused on an officer-marked interval/question. | Adds a new audited evidence run/proposal; it does not accept a finding. |
+| `lookup_caab_candidates` | Search active CAAB taxa by common/scientific name or exact `SPCODE`. | Read-only apart from the tool ledger. |
+| `create_corrected_proposal` | Validate and store a structured draft containing taxon, optional active CAAB code, whole-number count, bounded evidence range, interaction classification, confidence and evidence summary. | Draft only; cannot update the observation. |
+
+Conversation messages, tool calls and draft proposals persist in `AFMA_CM_REVIEW_MESSAGES`, `AFMA_CM_REVIEW_TOOL_RUNS` and `AFMA_CM_REVIEW_PROPOSALS`. The model receives up to 24 prior reviewer/agent turns and may make at most four tool round trips per officer message. Temperature is `0.1`. A separate officer action validates segment bounds, count, active CAAB code and interaction class before calling `AFMA_CM_API.REVIEW_OBSERVATION`; this is the only acceptance path.
+
+Controlled live verification on 29 September 2026 asked the agent to summarise the existing 00:00–00:50 context and explicitly prohibited video reprocessing or correction. Gemini called only `get_review_context`, returned the current Skipjack Tuna/count-110 proposal as existing state rather than truth, and the three-message conversation plus one tool run survived a full page reload. No evidence proposal or officer decision was changed by that test.
+
 ## Metadata v1 exact contract — governed draft
 
 The exact system prompt, task prompt and JSON schema are seeded by `database/116_add_afma_catch_monitor_prompt_governance.sql` and rendered verbatim in the Catch Monitor prompt-review panel. Approval is a named, timestamped transition from `DRAFT` to `ACTIVE`; it is never implied by uploading or registering a video. Activation enables only an explicit metadata-generation action for uploaded BLOBs. It does not process registered video-page URLs, run automatically, create catch events, change reported data or publish a compliance finding.

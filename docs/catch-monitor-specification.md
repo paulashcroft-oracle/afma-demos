@@ -5,7 +5,7 @@ Prepared: 26 September 2026
 Implemented: 28 September 2026 under AI Hub task `caab-016`  
 Scope: AIDEMODB app 101 demonstrator, not a production reporting system.
 
-Implemented slice: reviewer-only page 4, versioned reported-data API, freeze/amend rules, CAAB-linked identities, selectable source-traced video cases, evidence-provenance labels, catch/wildlife review controls, reconciliation, audit events, governed media metadata, the hybrid-incremental library plan, West Moore ground truth, APEX-to-Gemini trials, authorised test-video upload/URL intake, governed visual-only evidence prompts, deterministic validation, batch catch-count fields, and publication of validated model proposals into the officer review queue. Bulk media discovery, drive manifests, sensor import, production-scale asynchronous workers, cross-camera tracking, import templates and production authorisation/retention controls remain later delivery gates.
+Implemented slice: reviewer-only page 4, versioned reported-data API, freeze/amend rules, CAAB-linked identities, selectable source-traced video cases, evidence-provenance labels, catch/wildlife review controls, reconciliation, audit events, governed media metadata, the hybrid-incremental library plan, West Moore ground truth, APEX-to-Gemini trials, authorised test-video upload/URL intake, governed visual-only evidence prompts, deterministic validation, batch catch-count fields, publication of validated model proposals into the officer review queue, and a persistent Evidence Review Studio for bounded reviewer/AI investigation. Bulk media discovery, drive manifests, sensor import, production-scale asynchronous workers, cross-camera tracking, import templates and production authorisation/retention controls remain later delivery gates.
 
 ## Implemented selectable video set
 
@@ -428,6 +428,19 @@ Selecting an event opens evidence, species candidates and traits, count/fate con
 
 Every review card displays its complete evidence window as `MM:SS–MM:SS`, not just the first timestamp. The start is the earliest relevant hook-up or appearance used by the observation; the end is the last useful evidence frame or scene transition. These are evidence boundaries, not claims about exact capture, death, retention or release time.
 
+### Persistent Evidence Review Studio
+
+The event action is labelled **Review / correct**. It opens a segment-focused workspace rather than a one-shot correction prompt:
+
+- a YouTube source is embedded with the relevant stored-segment start/end bounds; the public player is for officer navigation, while Gemini continues to inspect the stored visual-only rendition;
+- the officer can seek in five-second steps, mark absolute source-video start/end times, ask questions, challenge a count or species, and add further evidence turns;
+- reviewer messages, agent responses, timestamps, tool arguments/outcomes and structured proposals persist in AIDEMODB across page reloads and browser sessions;
+- the agent can read the current observation, request fresh bounded visual analysis, search active CAAB taxa and prepare a corrected finding. Every tool call is allow-listed and audited;
+- model/tool results remain advisory. The agent cannot confirm a result or make a compliance finding. Only **Accept corrected finding** / **Save officer decision** writes the visible species/CAAB, count, evidence range and interaction classification through the deterministic review API; and
+- **Keep current result** closes the studio without a write, while **Escalate** requires an officer note and records the normal escalation decision.
+
+The structured finding panel is always editable. This makes a manual officer correction explicit rather than hiding it behind an ambiguous “save” button, while still allowing the officer and AI to investigate what went wrong first. A draft agent proposal never silently changes the current observation, prior human decision or another segment. The same review session can be reopened to continue the conversation with its complete history.
+
 The reconciliation page is an operation register with filters and three columns: **frozen reported information**, **video evidence**, and **AFMA reviewer finding/action**. Each row shows a comparison outcome and links back to both the source report version and supporting clip. A footer enables `Complete review` only when critical alerts have a reviewed state. A guidance drawer provides source, applicability, review date, current concession conditions and relevant logbook instructions.
 
 ## Data and technical design
@@ -438,7 +451,7 @@ Pipeline: record source/rights status and validate checksum/media quality; segme
 
 An authorised reviewer can request fresh analysis of an individual unreviewed segment or apply the same guidance sequentially to every stored segment. The editable reviewer guidance supplements the active governed task prompt and is shown before submission; it does not replace or silently revise the governed contract. The runtime wrapper tells the model to treat suggested counts and identities as hypotheses, independently test them against visible frames, and follow the system prompt, schema and visible evidence when they conflict. Each action records the selected stored rendition, active prompt/version, model, exact reviewer instruction, raw response and replacement relationship. A successful retry marks the prior proposal superseded but does not delete it; a failed retry leaves the prior proposal current. Current workbench counts, reconciliation and summaries exclude superseded proposals.
 
-The event-level **Correct** action exposes both paths explicitly: save the officer's edited CAAB identity/count as a manual correction, or send a reviewer guidance turn to Gemini for the complete source segment. A reviewer may reopen Correct and add follow-up guidance, producing an audited sequence of new evidence proposals. They may also apply the same guidance across all stored segments when the issue is source-wide, such as a likely species-family misclassification. This iterative correction workflow is not an unrestricted chat and the model cannot silently apply fixes to other segments; each affected segment is reanalysed, validated and returned to officer review.
+The event-level **Review / correct** action opens the persistent Evidence Review Studio described above. The conversation is open-ended within a strict evidence-review tool boundary: the agent may inspect the current bounded stored rendition, compare evidence, query CAAB and draft a structured correction, but it cannot access arbitrary SQL, change another segment, accept its own proposal or make a compliance finding. A reviewer may reopen the same session and add follow-up turns. Source-wide problems remain available through the separate audited **Re-analyse all stored segments** action; each affected segment is reanalysed, validated and returned to officer review rather than being silently rewritten by the conversation.
 
 ## Test-video acquisition plan
 
