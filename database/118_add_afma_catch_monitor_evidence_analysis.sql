@@ -749,8 +749,13 @@ create or replace package body afma_cm_evidence_api as
     l_meta_confidence  number;
     l_cached_response  boolean;
     l_current_event_count number := 0;
+    l_processing_status varchar2(40);
     l_actor            varchar2(255) := actor_name;
     l_new_model_calls  number := 0;
+    e_analysis_in_progress exception;
+    e_analysis_not_eligible exception;
+    pragma exception_init(e_analysis_in_progress, -20323);
+    pragma exception_init(e_analysis_not_eligible, -20309);
     c_max_model_calls_per_request constant pls_integer := 6;
   begin
     if upper(coalesce(l_actor, 'ANONYMOUS')) in ('ANONYMOUS','NOBODY','PUBLIC_USER') then
@@ -776,18 +781,23 @@ create or replace package body afma_cm_evidence_api as
        and last_progress_at < systimestamp - numtodsinterval(7, 'MINUTE');
     commit;
 
-    select vs.analysis_run_id, ar.trip_id, mo.duration_seconds
-      into l_analysis_run_id, l_trip_id, l_source_duration
+    select vs.analysis_run_id, ar.trip_id, mo.duration_seconds, vs.processing_status
+      into l_analysis_run_id, l_trip_id, l_source_duration, l_processing_status
       from afma_cm_video_submissions vs
       join afma_cm_analysis_runs ar on ar.analysis_run_id = vs.analysis_run_id
       join afma_cm_media_objects mo
         on mo.submission_id = vs.submission_id
        and mo.object_key = 'SOURCE'
      where vs.submission_id = p_submission_id
-       and vs.processing_status in ('READY_FOR_ANALYSIS','ANALYSIS_FAILED','ANALYSIS_COMPLETE')
        and vs.rights_confirmed_yn = 'Y'
        and vs.handling_acknowledged_yn = 'Y'
      for update of vs.processing_status;
+
+    if l_processing_status = 'ANALYSING' then
+      raise_application_error(-20323, 'Another video analysis request is already running for this submission. Wait for it to finish, then refresh before requesting another re-analysis.');
+    elsif l_processing_status not in ('READY_FOR_ANALYSIS','ANALYSIS_FAILED','ANALYSIS_COMPLETE') then
+      raise_application_error(-20309, 'This submission is not currently eligible for video analysis. Refresh its processing status before retrying.');
+    end if;
 
     select prompt_contract_id, prompt_version, service_static_id, model_id,
            system_prompt, task_prompt_template, response_json_schema
@@ -1236,6 +1246,10 @@ create or replace package body afma_cm_evidence_api as
      );
     commit;
   exception
+    when e_analysis_in_progress then
+      raise;
+    when e_analysis_not_eligible then
+      raise;
     when no_data_found then
       raise_application_error(-20309, 'No active evidence prompt or eligible stored video was found.');
     when others then
