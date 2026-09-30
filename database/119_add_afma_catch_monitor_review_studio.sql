@@ -202,6 +202,21 @@ create or replace package body afma_cm_review_agent_api as
     return apex_escape.html_attribute(p_value);
   end a;
 
+  function safe_display_text(p_value in varchar2) return varchar2 is
+  begin
+    if p_value is null then
+      return null;
+    elsif instr(upper(p_value), 'ORA-20959') > 0 or
+          instr(upper(p_value), 'ORA-20954') > 0 or
+          instr(upper(p_value), 'TECHNICAL DETAIL:') > 0 or
+          instr(upper(p_value), 'INTERNAL AI SERVICE ERROR') > 0 then
+      return 'The video-analysis service did not complete this turn. The current finding and review history remain unchanged. Continue from existing evidence or retry later.';
+    elsif regexp_like(p_value, 'ORA-[[:digit:]]{3,5}', 'i') then
+      return 'The review action did not complete. No result was changed; full diagnostics remain in the authorised technical audit.';
+    end if;
+    return p_value;
+  end safe_display_text;
+
   procedure add_text(p_html in out nocopy clob, p_text in varchar2) is
   begin
     if p_text is not null then
@@ -215,9 +230,21 @@ create or replace package body afma_cm_review_agent_api as
   end add_line;
 
   function fmt_second(p_second in number) return varchar2 is
+    l_total   pls_integer := greatest(0, trunc(coalesce(p_second, 0)));
+    l_hours   pls_integer;
+    l_minutes pls_integer;
+    l_seconds pls_integer;
   begin
-    return lpad(trunc(coalesce(p_second, 0) / 60), 2, '0') || ':' ||
-           lpad(mod(trunc(coalesce(p_second, 0)), 60), 2, '0');
+    l_hours := trunc(l_total / 3600);
+    l_minutes := trunc(mod(l_total, 3600) / 60);
+    l_seconds := mod(l_total, 60);
+    if l_hours > 0 then
+      return case when l_hours < 10 then '0' end || to_char(l_hours) || ':' ||
+             lpad(to_char(l_minutes), 2, '0') || ':' ||
+             lpad(to_char(l_seconds), 2, '0');
+    end if;
+    return lpad(to_char(l_minutes), 2, '0') || ':' ||
+           lpad(to_char(l_seconds), 2, '0');
   end fmt_second;
 
   function youtube_video_id(p_source_url in varchar2) return varchar2 is
@@ -470,6 +497,8 @@ create or replace package body afma_cm_review_agent_api as
     l_tool_run_id number;
     l_instruction varchar2(1000);
     l_result clob;
+    l_error_code integer;
+    l_error_message varchar2(4000);
   begin
     l_tool_run_id := begin_tool_run(l_session_id, 'inspect_stored_segment', p_param.args);
     select rs.submission_id, rs.media_object_id, rs.observation_id,
@@ -566,11 +595,42 @@ create or replace package body afma_cm_review_agent_api as
     p_result.result := l_result;
   exception
     when others then
+      l_error_code := sqlcode;
+      l_error_message := substr(sqlerrm, 1, 4000);
+      if l_error_code in (-20959, -20954) or
+         instr(l_error_message, 'ORA-20959') > 0 or
+         instr(l_error_message, 'ORA-20954') > 0 then
+        update afma_cm_review_sessions
+           set session_status = 'OPEN', updated_at = systimestamp, updated_by = actor_name
+         where review_session_id = l_session_id;
+        if l_tool_run_id is not null then
+          fail_tool_run(l_tool_run_id, l_error_message);
+        else
+          commit;
+        end if;
+        select json_object(
+                 'status' value 'RETRYABLE_SERVICE_ERROR',
+                 'tool' value 'inspect_stored_segment',
+                 'reviewSessionId' value l_session_id,
+                 'retryable' value 'true' format json,
+                 'priorProposalPreserved' value 'true' format json,
+                 'message' value 'The video-analysis service did not complete this inspection. The current finding and complete review history remain unchanged.',
+                 'suggestedAction' value 'Continue from the existing evidence or retry the stored segment in a later chat turn.'
+                 returning clob)
+          into l_result
+          from dual;
+        p_result.result := l_result;
+        return;
+      end if;
+
       update afma_cm_review_sessions
          set session_status = 'ERROR', updated_at = systimestamp, updated_by = actor_name
        where review_session_id = l_session_id;
-      commit;
-      if l_tool_run_id is not null then fail_tool_run(l_tool_run_id, sqlerrm); end if;
+      if l_tool_run_id is not null then
+        fail_tool_run(l_tool_run_id, l_error_message);
+      else
+        commit;
+      end if;
       raise;
   end tool_inspect_stored_segment;
 
@@ -754,6 +814,7 @@ create or replace package body afma_cm_review_agent_api as
       'Never infer catch totals from crew count, fishing activity, pole movement, claimed catch rate or accumulated fish already on deck. ' ||
       'Count only visible completed water-to-vessel or water-to-deck landing transitions, distinguish new catches from accumulation/replay, and cite timestamps. ' ||
       'Use get_review_context before asserting the current state. Use inspect_stored_segment when the visual result needs reconsideration. ' ||
+      'If inspect_stored_segment returns RETRYABLE_SERVICE_ERROR, do not repeat the tool in the same turn. Briefly say that the video-analysis service did not complete, that the current finding and history are preserved, and that the officer may continue from existing evidence or retry later. Never expose raw Oracle/provider errors or label them as technical detail. ' ||
       'Use lookup_caab_candidates before selecting a CAAB code if identity is uncertain. ' ||
       'When evidence supports a correction, call create_corrected_proposal with a structured finding. ' ||
       'Do not claim that any proposal is accepted or a compliance finding. The officer alone accepts a proposal in the application. ' ||
@@ -822,6 +883,8 @@ create or replace package body afma_cm_review_agent_api as
     if l_response is null then
       l_response := to_clob('The review agent returned no text response.');
     end if;
+    l_response := replace(l_response, 'Technical detail:', 'Service status:');
+    l_response := regexp_replace(l_response, 'ORA-[[:digit:]]{3,5}', 'service error', 1, 0, 'i');
 
     insert into afma_cm_review_messages (
       review_session_id, message_role, message_text
@@ -843,10 +906,20 @@ create or replace package body afma_cm_review_agent_api as
         review_session_id, message_role, message_text
       ) values (
         p_review_session_id, 'AGENT',
-        'I could not complete that investigation. The existing result and prior review history remain unchanged. Technical detail: ' || l_error
+        case
+          when instr(l_error, 'ORA-20959') > 0 or instr(l_error, 'ORA-20954') > 0 then
+            'The video-analysis service did not complete this turn. Your message, current finding and review history are preserved. Please retry shortly; no result was changed.'
+          else
+            'The review agent could not complete this turn. Your message, current finding and review history are preserved. No result was changed; review session #' || p_review_session_id || ' remains available for follow-up.'
+        end
       );
       update afma_cm_review_sessions
-         set session_status = 'ERROR', updated_at = systimestamp, updated_by = actor_name
+         set session_status = case
+               when instr(l_error, 'ORA-20959') > 0 or instr(l_error, 'ORA-20954') > 0 then 'OPEN'
+               else 'ERROR'
+             end,
+             updated_at = systimestamp,
+             updated_by = actor_name
        where review_session_id = p_review_session_id;
       commit;
   end send_message;
@@ -1052,7 +1125,7 @@ create or replace package body afma_cm_review_agent_api as
        where review_session_id = p_review_session_id
        order by tool_run_id
     ) loop
-      add_line(l_html, '<article><strong>' || h(replace(initcap(tr.tool_name),'_',' ')) || '</strong><span class="cm-badge ' || case when tr.run_status='COMPLETE' then 'cm-badge-ok' when tr.run_status='FAILED' then 'cm-badge-risk' else 'cm-badge-warn' end || '">' || h(tr.run_status) || '</span><small>' || h(to_char(tr.started_at,'DD Mon HH24:MI:SS')) || case when tr.evidence_run_id is not null then ' · evidence run #' || tr.evidence_run_id end || case when tr.error_message is not null then ' · ' || h(tr.error_message) end || '</small></article>');
+      add_line(l_html, '<article><strong>' || h(replace(initcap(tr.tool_name),'_',' ')) || '</strong><span class="cm-badge ' || case when tr.run_status='COMPLETE' then 'cm-badge-ok' when tr.run_status='FAILED' then 'cm-badge-risk' else 'cm-badge-warn' end || '">' || h(tr.run_status) || '</span><small>' || h(to_char(tr.started_at,'DD Mon HH24:MI:SS')) || case when tr.evidence_run_id is not null then ' · evidence run #' || tr.evidence_run_id end || case when tr.error_message is not null then ' · ' || h(safe_display_text(tr.error_message)) end || '</small></article>');
     end loop;
     add_line(l_html, '</div></details></section>');
 
@@ -1063,11 +1136,11 @@ create or replace package body afma_cm_review_agent_api as
        where review_session_id = p_review_session_id
        order by review_message_id
     ) loop
-      add_line(l_html, '<article class="cm-chat cm-chat--' || lower(m.message_role) || ' hub-task-adviser-message hub-task-adviser-message--' || case when m.message_role='REVIEWER' then 'user' when m.message_role='AGENT' then 'assistant' else 'system' end || '" data-role="' || case when m.message_role='REVIEWER' then 'user' when m.message_role='AGENT' then 'assistant' else 'system' end || '"><div class="hub-task-adviser-bubble"><div class="cm-chat__meta hub-task-adviser-message-role"><strong>' || h(case m.message_role when 'REVIEWER' then 'Officer' when 'AGENT' then 'Catch Monitor agent' else initcap(m.message_role) end) || '</strong><small>' || h(to_char(m.created_at,'DD Mon HH24:MI:SS')) || '</small></div><div class="hub-task-adviser-message-content hub-task-adviser-markdown"><p>' || replace(h(dbms_lob.substr(m.message_text,4000,1)),chr(10),'<br>') || '</p>' || case when m.time_start_second is not null then '<button type="button" class="cm-timecode cm-studio-seek" data-second="' || m.time_start_second || '"><span aria-hidden="true">▶</span> ' || h(fmt_second(m.time_start_second)) || case when m.time_end_second is not null and m.time_end_second<>m.time_start_second then '–' || h(fmt_second(m.time_end_second)) end || '</button>' end || '</div></div></article>');
+      add_line(l_html, '<article class="cm-chat cm-chat--' || lower(m.message_role) || ' hub-task-adviser-message hub-task-adviser-message--' || case when m.message_role='REVIEWER' then 'user' when m.message_role='AGENT' then 'assistant' else 'system' end || '" data-role="' || case when m.message_role='REVIEWER' then 'user' when m.message_role='AGENT' then 'assistant' else 'system' end || '"><div class="hub-task-adviser-bubble"><div class="cm-chat__meta hub-task-adviser-message-role"><strong>' || h(case m.message_role when 'REVIEWER' then 'Officer' when 'AGENT' then 'Catch Monitor agent' else initcap(m.message_role) end) || '</strong><small>' || h(to_char(m.created_at,'DD Mon HH24:MI:SS')) || '</small></div><div class="hub-task-adviser-message-content hub-task-adviser-markdown"><p>' || replace(h(safe_display_text(dbms_lob.substr(m.message_text,4000,1))),chr(10),'<br>') || '</p>' || case when m.time_start_second is not null then '<button type="button" class="cm-timecode cm-studio-seek" data-second="' || m.time_start_second || '"><span aria-hidden="true">▶</span> ' || h(fmt_second(m.time_start_second)) || case when m.time_end_second is not null and m.time_end_second<>m.time_start_second then '–' || h(fmt_second(m.time_end_second)) end || '</button>' end || '</div></div></article>');
     end loop;
     add_line(l_html, '</div><footer class="cm-chat-composer hub-task-adviser-composer"><div id="cmStudioAttachmentStrip" class="cm-chat-attachments hub-task-adviser-attachment-strip" hidden><span class="hub-task-adviser-attachment-label">Attached to chat</span><div class="hub-task-adviser-attachments"><span class="hub-task-adviser-attachment"><button type="button" class="cm-timecode" id="cmStudioAttachedRange"></button><button type="button" class="cm-chat-attachment-remove" id="cmStudioRemoveAttachment" title="Remove video range" aria-label="Remove attached video range">×</button></span></div></div><div class="cm-chat-prompt-shell hub-task-adviser-prompt-shell"><textarea id="cmStudioMessage" class="hub-task-adviser-prompt" rows="3" maxlength="4000" aria-label="Message Catch Monitor agent" placeholder="Ask about this segment…"></textarea><button type="button" class="t-Button t-Button--hot t-Button--noLabel cm-chat-send hub-task-adviser-ask" id="cmStudioSend" title="AI Assist" aria-label="AI Assist"><span class="fa fa-arrow-up" aria-hidden="true"></span><span class="cm-spinner" aria-hidden="true"></span></button></div><div class="cm-chat-composer-bar hub-task-adviser-actions"><span id="cmStudioSendStatus" class="cm-chat-status hub-task-adviser-status" role="status" aria-live="polite">Enter sends · Shift+Enter adds a line</span><button type="button" class="cm-chat-attach" id="cmStudioAttachRange"><span class="fa fa-paperclip" aria-hidden="true"></span> Attach marked video range</button></div></footer></section></div>');
 
-    add_line(l_html, '<section class="cm-proposal" data-proposal-id="' || coalesce(to_char(l_proposal_id),'') || '"><div class="cm-proposal__head"><div><span class="cm-badge ' || case when l_proposal_id is not null then 'cm-badge-warn' else 'cm-badge-neutral' end || '">' || h(case when l_proposal_id is not null then 'Agent proposal' else 'Current result / officer edit' end) || '</span><h3>Structured corrected finding</h3></div><p>' || h(l_summary) || '</p></div><div class="cm-proposal__fields"><label>Species or taxon<input id="cmProposalTaxon" value="' || a(l_taxon_text) || '"></label><label>CAAB SPCODE<input id="cmProposalSpcode" value="' || a(l_spcode) || '" placeholder="Blank if unresolved"></label><label>Count<input id="cmProposalCount" type="number" min="0" step="1" value="' || l_count || '"></label><label>Start second<input id="cmProposalStart" type="number" min="' || l_segment_start || '" max="' || l_segment_end || '" step="0.1" value="' || l_event_start || '"></label><label>End second<input id="cmProposalEnd" type="number" min="' || l_segment_start || '" max="' || l_segment_end || '" step="0.1" value="' || l_event_end || '"></label><label>Interaction<select id="cmProposalInteraction">');
+    add_line(l_html, '<section class="cm-proposal" data-proposal-id="' || coalesce(to_char(l_proposal_id),'') || '"><div class="cm-proposal__head"><div><span class="cm-badge ' || case when l_proposal_id is not null then 'cm-badge-warn' else 'cm-badge-neutral' end || '">' || h(case when l_proposal_id is not null then 'Agent proposal' else 'Current result / officer edit' end) || '</span><h3>Structured corrected finding</h3></div><p>' || h(l_summary) || '</p></div><div class="cm-proposal__fields"><label>Species or taxon<input id="cmProposalTaxon" value="' || a(l_taxon_text) || '"></label><label>CAAB SPCODE<input id="cmProposalSpcode" value="' || a(l_spcode) || '" placeholder="Blank if unresolved"></label><label>Count<input id="cmProposalCount" type="number" min="0" step="1" value="' || l_count || '"></label><label>Start time<input id="cmProposalStart" type="text" inputmode="numeric" autocomplete="off" placeholder="00:06" value="' || a(fmt_second(l_event_start)) || '"></label><label>End time<input id="cmProposalEnd" type="text" inputmode="numeric" autocomplete="off" placeholder="00:50" value="' || a(fmt_second(l_event_end)) || '"></label><label>Interaction<select id="cmProposalInteraction">');
     for c in (
       select 'NOT_APPLICABLE' v, 'Not applicable' d, 1 n from dual union all
       select 'SIGHTING','Wildlife sighting',2 from dual union all

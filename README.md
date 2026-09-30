@@ -30,7 +30,7 @@ This repository holds the replayable source assets for the AFMA APEX demo applic
 - Catch Monitor specification, selectable video set and AFMA/source research: [`docs/catch-monitor-specification.md`](docs/catch-monitor-specification.md)
 - Database scripts: [`database/`](database/)
 - Local data helpers: [`tools/`](tools/)
-- Current APEXlang Standard Export: [`exports/apex/afma/101/20260929-after-caab-016-evidence-review-studio-apexlang-standard-export/`](exports/apex/afma/101/20260929-after-caab-016-evidence-review-studio-apexlang-standard-export/)
+- Current APEXlang Standard Export: [`exports/apex/afma/101/20260930-after-caab-016-timecode-ai-hub-service-stability-apexlang-standard-export/`](exports/apex/afma/101/20260930-after-caab-016-timecode-ai-hub-service-stability-apexlang-standard-export/)
 - Demo access: app page/login components are represented by the APEXlang application export; do not recreate them through numbered SQL. The retired `050_add_demo_user_login.sql` script was app-login metadata, not operational database/security provisioning.
 - Feedback model: `database/085_create_ai_hub_feedback_model.sql` keeps only the database/data bridge for native APEX Feedback to AI Hub. Feedback pages, navigation, workspace credentials, and AI configs are application metadata owned by APEXlang/application source.
 - Live SQL Scripts catalog cleanup on 2026-07-15: retained database/data scripts are `010`, `020`, `025`, `030`, `040`, `045`, `085_create_ai_hub_feedback_model.sql`, and `086_verify_ai_hub_feedback_model.sql`. Legacy app-metadata catalog scripts `050`, `080`, `090`, and the mixed `085_enable_ai_hub_feedback_model.sql` are no longer retained.

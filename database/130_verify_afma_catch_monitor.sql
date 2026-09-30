@@ -115,14 +115,21 @@ select t.trip_ref,
        ar.model_version annotation_mode,
        ar.media_manifest,
        count(o.observation_id) evidence_events,
-       ar.run_notes
+       case
+         when regexp_like(ar.run_notes, 'ORA-[[:digit:]]{3,5}', 'i') then 'TECHNICAL_DIAGNOSTIC_RECORDED'
+         else ar.run_notes
+       end run_notes
   from afma_cm_trips t
   join afma_cm_analysis_runs ar on ar.trip_id = t.trip_id
   join afma_cm_media_assets m on m.media_asset_id = ar.media_asset_id
   left join afma_cm_observations o on o.analysis_run_id = ar.analysis_run_id
  where m.asset_role = 'SOURCE_VIDEO'
  group by t.trip_ref, m.title, m.source_system, m.australian_region,
-          m.duration_seconds, ar.model_version, ar.media_manifest, ar.run_notes
+          m.duration_seconds, ar.model_version, ar.media_manifest,
+          case
+            when regexp_like(ar.run_notes, 'ORA-[[:digit:]]{3,5}', 'i') then 'TECHNICAL_DIAGNOSTIC_RECORDED'
+            else ar.run_notes
+          end
  order by case t.trip_ref
             when 'CM-QLD-002' then 1
             when 'CM-QLD-003' then 2
@@ -176,7 +183,10 @@ select submission_ref,
        processing_status,
        processing_stage,
        progress_percent,
-       processing_message,
+       case
+         when regexp_like(processing_message, 'ORA-[[:digit:]]{3,5}', 'i') then 'TECHNICAL_DIAGNOSTIC_RECORDED'
+         else processing_message
+       end processing_message,
        processing_started_at,
        processing_completed_at,
        last_progress_at,
@@ -377,6 +387,59 @@ select count(*) review_segment_media_contract_count
  where name = 'AFMA_CM_REVIEW_AGENT_API'
    and type in ('PACKAGE','PACKAGE BODY')
    and text like '%get_segment_media%';
+
+select afma_cm_review_agent_api.fmt_second(6) short_timecode,
+       afma_cm_review_agent_api.fmt_second(50) short_end_timecode,
+       afma_cm_review_agent_api.fmt_second(3723) hour_timecode
+  from dual;
+
+select count(*) review_studio_timecode_input_contract_count
+  from user_source
+ where name = 'AFMA_CM_REVIEW_AGENT_API'
+   and type = 'PACKAGE BODY'
+   and text like '%Start time<input id="cmProposalStart"%'
+   and text like '%End time<input id="cmProposalEnd"%';
+
+select count(*) review_studio_timecode_parser_contract_count
+  from user_source
+ where name = 'AFMA_CM_PAGE_API'
+   and type = 'PACKAGE BODY'
+   and text like '%studioParseTimecode%'
+   and text like '%MM:SS or HH:MM:SS%';
+
+select count(*) retryable_video_service_contract_count
+  from user_source
+ where name = 'AFMA_CM_REVIEW_AGENT_API'
+   and type = 'PACKAGE BODY'
+   and (text like '%RETRYABLE_SERVICE_ERROR%'
+        or text like '%priorProposalPreserved%');
+
+select count(*) retryable_service_prompt_guard_count
+  from user_source
+ where name = 'AFMA_CM_REVIEW_AGENT_API'
+   and type = 'PACKAGE BODY'
+   and text like '%Never expose raw Oracle/provider errors%';
+
+select count(*) review_chat_error_redaction_contract_count
+  from user_source
+ where name = 'AFMA_CM_REVIEW_AGENT_API'
+   and type = 'PACKAGE BODY'
+   and (text like '%Service status:%'
+        or text like '%ORA-[[:digit:]]{3,5}%');
+
+select count(*) review_chat_ai_hub_layout_contract_count
+  from user_source
+ where name = 'AFMA_CM_PAGE_API'
+   and type = 'PACKAGE BODY'
+   and (text like '%.cm-chat.hub-task-adviser-message%'
+        or text like '%.cm-chat-log.hub-task-adviser-thread%'
+        or text like '%.cm-chat-composer.hub-task-adviser-composer%');
+
+select count(*) reviewer_safe_error_display_contract_count
+  from user_source
+ where name in ('AFMA_CM_PAGE_API','AFMA_CM_REVIEW_AGENT_API')
+   and type = 'PACKAGE BODY'
+   and text like '%safe_display_text%';
 
 select count(*) catch_monitor_javascript_bootstrap_count
   from apex_application_pages
