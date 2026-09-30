@@ -352,8 +352,21 @@ select count(*) review_studio_ajax_process_count
    and page_id = 4
    and process_name = 'AFMA_CM_EVIDENCE_ACTION'
    and dbms_lob.instr(process_source, 'OPEN_REVIEW_SESSION') > 0
+   and dbms_lob.instr(process_source, 'GET_REVIEW_SEGMENT') > 0
    and dbms_lob.instr(process_source, 'SEND_REVIEW_MESSAGE') > 0
    and dbms_lob.instr(process_source, 'ACCEPT_REVIEW_PROPOSAL') > 0;
+
+select count(*) review_segment_media_contract_count
+  from user_source
+ where name = 'AFMA_CM_REVIEW_AGENT_API'
+   and type in ('PACKAGE','PACKAGE BODY')
+   and text like '%get_segment_media%';
+
+select count(*) catch_monitor_javascript_bootstrap_count
+  from apex_application_pages
+ where application_id = 101
+   and page_id = 4
+   and dbms_lob.instr(javascript_code_onload, 'activateCatchMonitor') > 0;
 
 select rs.review_session_id,
        rs.session_status,

@@ -37,6 +37,21 @@ A proposed v5 must be reviewed before activation. At minimum it should:
 - require temporal anchors supporting every individual count or each transition within a small batch; and
 - define segment intervals as start-inclusive and end-exclusive so a boundary landing is assigned once.
 
+### Why the Moreton/West Moore-style sample succeeds while dense pole fishing fails
+
+The successful sparse-catch sample and the failed `Life of a Fisherman` segment exercise materially different vision tasks. In the sparse sample, catches are sequential, occupy a large part of the frame, and are held or displayed long enough for a multimodal model to associate one visible fish with one event. In the dense pole-fishing sample, many people move simultaneously in a wide shot, each fish is small, landing transitions are brief and partly occluded, and an accumulating deck inventory is continuously visible. Gemini is useful for species/context reasoning in both cases, but its direct whole-segment count is not reliable in the second case: it substitutes an inferred activity rate for enumerated landings.
+
+The production design must therefore route by scene complexity rather than apply one prompt or one segment duration to every source:
+
+1. Run a cheap scene assessment over camera geometry, apparent object size, simultaneous activity, occlusion, catch cadence and visible deck accumulation.
+2. Use the current Gemini evidence path for sparse, isolated events, while still requiring officer review.
+3. Route dense or ambiguous intervals to a landing-transition pipeline using higher-frequency frame extraction, candidate detection/tracking and short overlapping micro-windows around each transition.
+4. Require a `landing_ledger` entry for every proposed new catch: source timestamp/range, camera region or track reference, pre/post-transition evidence, duplicate group and confidence.
+5. Compute the proposed count deterministically from unique ledger entries. The model may classify or explain the ledger; it may not extrapolate a count from activity rate, number of fishers, pole motion or deck inventory.
+6. If the system cannot enumerate defensible transitions, return an unresolved count and the reason. Do not turn a rate estimate into an exact or bounded catch total.
+
+The sparse sample is retained as a positive control; `Life of a Fisherman` is retained as a dense-scene stress test and known v4 failure. A v5 benchmark must report transition precision/recall, duplicate rate and count error separately for both scene classes. Prompt refinement alone is not considered sufficient to close the dense-counting gap.
+
 ## Production AFMA EM prompt invariant
 
 AFMA's [September 2026 privacy-impact summary](https://www.afma.gov.au/sites/default/files/2026-09/E-monitoring%20Summary%20Privacy%20Impact%20Assessment%20(Sept%202026).pdf) states that EM footage is fixed-camera video only, with no microphones or audio recordings. Therefore every production AFMA EM prompt and schema must:

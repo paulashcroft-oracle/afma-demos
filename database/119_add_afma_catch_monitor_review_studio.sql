@@ -155,6 +155,15 @@ create or replace package afma_cm_review_agent_api authid definer as
     p_review_session_id in number
   ) return clob;
 
+  procedure get_segment_media(
+    p_review_session_id   in number,
+    p_filename            out varchar2,
+    p_mime_type           out varchar2,
+    p_source_start_second out number,
+    p_source_end_second   out number,
+    p_content             out nocopy blob
+  );
+
   procedure tool_get_review_context(
     p_param  in            apex_ai.t_tool_exec_param,
     p_result in out nocopy apex_ai.t_tool_exec_result
@@ -260,6 +269,36 @@ create or replace package body afma_cm_review_agent_api as
       raise_application_error(-20400, 'The Evidence Review Studio session is not available.');
     end if;
   end validate_session;
+
+  procedure get_segment_media(
+    p_review_session_id   in number,
+    p_filename            out varchar2,
+    p_mime_type           out varchar2,
+    p_source_start_second out number,
+    p_source_end_second   out number,
+    p_content             out nocopy blob
+  ) is
+  begin
+    validate_session(p_review_session_id);
+    select mo.original_filename,
+           mo.mime_type,
+           mo.source_start_second,
+           mo.source_end_second,
+           mo.content_blob
+      into p_filename,
+           p_mime_type,
+           p_source_start_second,
+           p_source_end_second,
+           p_content
+      from afma_cm_review_sessions rs
+      join afma_cm_media_objects mo on mo.media_object_id = rs.media_object_id
+     where rs.review_session_id = p_review_session_id
+       and mo.content_blob is not null
+       and dbms_lob.getlength(mo.content_blob) > 0;
+  exception
+    when no_data_found then
+      raise_application_error(-20408, 'The stored bounded segment is no longer available for playback.');
+  end get_segment_media;
 
   function open_session(p_observation_id in number) return number is
     l_session_id number;
@@ -952,6 +991,7 @@ create or replace package body afma_cm_review_agent_api as
     l_proposal_source varchar2(30);
     l_summary varchar2(4000);
     l_confidence number;
+    l_segment_available_yn varchar2(1);
   begin
     validate_session(p_review_session_id);
     select rs.session_status, o.observation_id,
@@ -960,10 +1000,11 @@ create or replace package body afma_cm_review_agent_api as
            coalesce(t.common_name,t.scientific_name,o.ai_taxon_text,'Unresolved taxon'),
            coalesce(o.reviewed_spcode,o.ai_spcode), coalesce(o.reviewed_count,o.ai_count),
            coalesce(o.reviewed_interaction_class,o.ai_interaction_class,'NOT_APPLICABLE'),
-           ma.source_record_url
+           ma.source_record_url,
+           case when mo.content_blob is not null and dbms_lob.getlength(mo.content_blob) > 0 then 'Y' else 'N' end
       into l_status, l_observation_id, l_segment_start, l_segment_end,
            l_event_start, l_event_end, l_taxon_text, l_spcode, l_count,
-           l_interaction, l_source_url
+           l_interaction, l_source_url, l_segment_available_yn
       from afma_cm_review_sessions rs
       join afma_cm_observations o on o.observation_id = rs.observation_id
       join afma_cm_analysis_runs ar on ar.analysis_run_id = o.analysis_run_id
@@ -992,17 +1033,18 @@ create or replace package body afma_cm_review_agent_api as
 
     l_video_id := youtube_video_id(l_source_url);
     dbms_lob.createtemporary(l_html, true);
-    add_line(l_html, '<div class="cm-studio" data-review-session-id="' || p_review_session_id || '" data-segment-start="' || l_segment_start || '" data-segment-end="' || l_segment_end || '">');
+    add_line(l_html, '<div class="cm-studio hub-ai-assistant-dialog" data-review-session-id="' || p_review_session_id || '" data-segment-start="' || l_segment_start || '" data-segment-end="' || l_segment_end || '" data-event-start="' || l_event_start || '" data-event-end="' || l_event_end || '" data-segment-available="' || l_segment_available_yn || '">');
     add_line(l_html, '<header class="cm-studio__head"><div><span class="cm-kicker">Persistent evidence review session #' || p_review_session_id || '</span><h2>Investigate event ' || h(fmt_second(l_event_start)) || '–' || h(fmt_second(l_event_end)) || '</h2><p>Discuss the evidence, reprocess the stored visual-only segment and accept only the finding you support.</p></div><span class="cm-badge cm-badge-neutral">' || h(l_status) || '</span></header>');
     add_line(l_html, '<div class="cm-studio__grid"><section class="cm-studio__video"><h3>Segment playback</h3>');
+    add_line(l_html, '<div id="cmStudioMedia" class="cm-studio__media" aria-live="polite"><div class="cm-studio__video-loading"><span class="cm-spinner" aria-hidden="true"></span><strong>Loading stored segment…</strong></div></div>');
     if l_video_id is not null then
-      add_line(l_html, '<iframe id="cmStudioPlayer" class="cm-video" title="Review segment playback" src="https://www.youtube-nocookie.com/embed/' || a(l_video_id) || '?rel=0&amp;enablejsapi=1&amp;start=' || trunc(l_segment_start) || '&amp;end=' || ceil(l_segment_end) || '" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>');
-      add_line(l_html, '<p class="cm-footnote">The player is bounded to ' || h(fmt_second(l_segment_start)) || '–' || h(fmt_second(l_segment_end)) || ' for reviewer navigation. Gemini reprocessing uses the stored visual-only rendition, not this public playback stream.</p>');
+      add_line(l_html, '<div id="cmStudioSourceFallback" hidden><iframe id="cmStudioSourcePlayer" class="cm-video" title="Bounded source preview" data-src="https://www.youtube-nocookie.com/embed/' || a(l_video_id) || '?rel=0&amp;enablejsapi=1&amp;start=' || trunc(l_segment_start) || '&amp;end=' || ceil(l_segment_end) || '" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe><p class="cm-footnote">Stored-segment playback was unavailable, so this is a time-bounded preview of the public source.</p></div>');
     else
-      add_line(l_html, '<div class="cm-studio__video-placeholder"><strong>Stored segment ' || h(fmt_second(l_segment_start)) || '–' || h(fmt_second(l_segment_end)) || '</strong><p>Embedded playback is unavailable for this non-YouTube source. The stored rendition remains available to the analysis tool.</p></div>');
+      add_line(l_html, '<div id="cmStudioSourceFallback" class="cm-studio__video-placeholder" hidden><strong>Stored segment ' || h(fmt_second(l_segment_start)) || '–' || h(fmt_second(l_segment_end)) || '</strong><p>Playback is unavailable. The retained rendition may still be used by the governed analysis tool.</p></div>');
     end if;
-    add_line(l_html, '<div class="cm-studio__transport"><button type="button" class="cm-btn cm-studio-seek" data-second="' || l_segment_start || '">Segment start</button><button type="button" class="cm-btn cm-studio-step" data-delta="-5">−5s</button><button type="button" class="cm-btn cm-studio-step" data-delta="5">+5s</button><span id="cmStudioTime">' || h(fmt_second(l_segment_start)) || '</span></div>');
-    add_line(l_html, '<div class="cm-studio__mark"><label>Marked start (seconds)<input id="cmStudioMarkStart" type="number" min="' || l_segment_start || '" max="' || l_segment_end || '" step="0.1" value="' || l_event_start || '"></label><label>Marked end (seconds)<input id="cmStudioMarkEnd" type="number" min="' || l_segment_start || '" max="' || l_segment_end || '" step="0.1" value="' || l_event_end || '"></label></div>');
+    add_line(l_html, '<p id="cmStudioPlaybackNote" class="cm-footnote">This player loads the exact stored visual-only analysis rendition for source time ' || h(fmt_second(l_segment_start)) || '–' || h(fmt_second(l_segment_end)) || '.</p>');
+    add_line(l_html, '<div class="cm-studio__transport"><button type="button" class="cm-btn cm-studio-seek" data-second="' || l_segment_start || '">Start of segment</button><button type="button" class="cm-btn cm-studio-step" data-delta="-5">−5s</button><button type="button" class="cm-btn cm-studio-step" data-delta="5">+5s</button><span id="cmStudioTime">' || h(fmt_second(l_segment_start)) || '</span></div>');
+    add_line(l_html, '<div class="cm-studio__range"><div><span class="cm-kicker">Marked evidence range</span><strong id="cmStudioRangeLabel">' || h(fmt_second(l_event_start)) || '–' || h(fmt_second(l_event_end)) || '</strong></div><div><button type="button" class="cm-btn" id="cmStudioMarkStartButton">Mark range start</button><button type="button" class="cm-btn" id="cmStudioMarkEndButton">Mark range end</button><button type="button" class="cm-btn" id="cmStudioResetRange">Reset to event</button></div><input id="cmStudioMarkStart" type="hidden" value="' || l_event_start || '"><input id="cmStudioMarkEnd" type="hidden" value="' || l_event_end || '"></div>');
     add_line(l_html, '<details class="cm-tool-ledger"><summary>Agent tool activity</summary><div>');
     for tr in (
       select tool_name, run_status, started_at, completed_at, evidence_run_id, error_message
@@ -1014,16 +1056,16 @@ create or replace package body afma_cm_review_agent_api as
     end loop;
     add_line(l_html, '</div></details></section>');
 
-    add_line(l_html, '<section class="cm-studio__conversation"><h3>Officer and AI investigation</h3><div class="cm-chat-log" id="cmChatLog">');
+    add_line(l_html, '<section class="cm-studio__conversation hub-ai-assistant-body"><div class="cm-chat-title"><div><h3>Evidence review chat</h3><p>Ask questions, challenge a count or species, and direct the agent to visible evidence.</p></div><span class="cm-badge cm-badge-neutral">Gemini 2.5 Pro</span></div><div class="cm-chat-log hub-ai-assistant-output" id="cmChatLog" role="log" aria-live="polite" aria-label="Evidence review conversation">');
     for m in (
       select message_role, message_text, time_start_second, time_end_second, created_at, created_by
         from afma_cm_review_messages
        where review_session_id = p_review_session_id
        order by review_message_id
     ) loop
-      add_line(l_html, '<article class="cm-chat cm-chat--' || lower(m.message_role) || '"><div><strong>' || h(case m.message_role when 'REVIEWER' then 'Officer' when 'AGENT' then 'Catch Monitor agent' else initcap(m.message_role) end) || '</strong><small>' || h(to_char(m.created_at,'DD Mon HH24:MI:SS')) || '</small></div><p>' || replace(h(dbms_lob.substr(m.message_text,4000,1)),chr(10),'<br>') || '</p>' || case when m.time_start_second is not null then '<button type="button" class="cm-timecode cm-studio-seek" data-second="' || m.time_start_second || '">' || h(fmt_second(m.time_start_second)) || case when m.time_end_second is not null and m.time_end_second<>m.time_start_second then '–' || h(fmt_second(m.time_end_second)) end || '</button>' end || '</article>');
+      add_line(l_html, '<article class="cm-chat cm-chat--' || lower(m.message_role) || ' hub-ai-message hub-ai-message--' || case when m.message_role='REVIEWER' then 'user' when m.message_role='AGENT' then 'assistant' else 'system' end || '"><div class="cm-chat__meta"><strong>' || h(case m.message_role when 'REVIEWER' then 'Officer' when 'AGENT' then 'Catch Monitor agent' else initcap(m.message_role) end) || '</strong><small>' || h(to_char(m.created_at,'DD Mon HH24:MI:SS')) || '</small></div><p>' || replace(h(dbms_lob.substr(m.message_text,4000,1)),chr(10),'<br>') || '</p>' || case when m.time_start_second is not null then '<button type="button" class="cm-timecode cm-studio-seek" data-second="' || m.time_start_second || '"><span aria-hidden="true">▶</span> ' || h(fmt_second(m.time_start_second)) || case when m.time_end_second is not null and m.time_end_second<>m.time_start_second then '–' || h(fmt_second(m.time_end_second)) end || '</button>' end || '</article>');
     end loop;
-    add_line(l_html, '</div><label for="cmStudioMessage"><strong>Ask, challenge or provide visual evidence</strong></label><textarea id="cmStudioMessage" maxlength="4000" placeholder="Example: I see completed landings at 00:33 and 00:48. Inspect those transitions and do not extrapolate from active fishers."></textarea><div class="cm-studio__composer-actions"><button type="button" class="cm-btn" id="cmStudioUseCurrentTime">Use current time</button><button type="button" class="cm-btn cm-btn-primary" id="cmStudioSend">Send to review agent</button></div></section></div>');
+    add_line(l_html, '</div><footer class="cm-chat-composer hub-ai-assistant-composer"><div id="cmStudioAttachmentStrip" class="cm-chat-attachments" hidden><span>Attached to this message</span><button type="button" class="cm-timecode" id="cmStudioAttachedRange"></button><button type="button" class="cm-chat-attachment-remove" id="cmStudioRemoveAttachment" title="Remove video range" aria-label="Remove attached video range">×</button></div><div class="cm-chat-prompt-shell"><textarea id="cmStudioMessage" rows="3" maxlength="4000" aria-label="Message Catch Monitor agent" placeholder="Ask about this segment…"></textarea><button type="button" class="cm-chat-send" id="cmStudioSend" title="Send" aria-label="Send"><span class="fa fa-arrow-up" aria-hidden="true"></span><span class="cm-spinner" aria-hidden="true"></span></button></div><div class="cm-chat-composer-bar"><button type="button" class="cm-chat-attach" id="cmStudioAttachRange"><span class="fa fa-paperclip" aria-hidden="true"></span> Attach marked video range</button><span id="cmStudioSendStatus" class="cm-chat-status" role="status" aria-live="polite">Enter sends · Shift+Enter adds a line</span></div></footer></section></div>');
 
     add_line(l_html, '<section class="cm-proposal" data-proposal-id="' || coalesce(to_char(l_proposal_id),'') || '"><div class="cm-proposal__head"><div><span class="cm-badge ' || case when l_proposal_id is not null then 'cm-badge-warn' else 'cm-badge-neutral' end || '">' || h(case when l_proposal_id is not null then 'Agent proposal' else 'Current result / officer edit' end) || '</span><h3>Structured corrected finding</h3></div><p>' || h(l_summary) || '</p></div><div class="cm-proposal__fields"><label>Species or taxon<input id="cmProposalTaxon" value="' || a(l_taxon_text) || '"></label><label>CAAB SPCODE<input id="cmProposalSpcode" value="' || a(l_spcode) || '" placeholder="Blank if unresolved"></label><label>Count<input id="cmProposalCount" type="number" min="0" step="1" value="' || l_count || '"></label><label>Start second<input id="cmProposalStart" type="number" min="' || l_segment_start || '" max="' || l_segment_end || '" step="0.1" value="' || l_event_start || '"></label><label>End second<input id="cmProposalEnd" type="number" min="' || l_segment_start || '" max="' || l_segment_end || '" step="0.1" value="' || l_event_end || '"></label><label>Interaction<select id="cmProposalInteraction">');
     for c in (

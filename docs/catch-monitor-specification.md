@@ -70,6 +70,16 @@ Production should make the policy configurable by model/version and footage clas
 - cap concurrent workers per tenancy/model endpoint and use exponential backoff for transient provider errors; and
 - retain the source-time offset and rendition manifest so every proposal links back to the exact original frames.
 
+Segmentation and counting are related but separate decisions. Shortening a dense scene can improve service reliability without making a multimodal model an accurate counter. The sparse Moreton/West Moore-style footage is a positive control: isolated, close-up, sequential fish can be proposed directly by Gemini for review. `Life of a Fisherman` is a deliberately difficult counterexample: many simultaneous fishers, small fast targets, occlusion and accumulated fish caused repeated rate-based overcounts of the same 00:00–00:50 rendition. The production orchestrator must classify scene complexity and route accordingly:
+
+- sparse isolated events may use direct multimodal event proposals;
+- dense/rapid passages require higher-frequency frame extraction, candidate detection/tracking and short overlapping micro-windows around suspected landing transitions;
+- each proposed new catch must be backed by a timestamped landing-ledger entry with a camera region/track reference, pre/post evidence, confidence and duplicate group;
+- the application calculates the count from unique ledger entries instead of accepting a model-generated activity-rate estimate; and
+- when transitions cannot be enumerated, the count is `UNRESOLVED` with an explanation rather than an estimated exact total.
+
+Gemini remains valuable in the dense path for scene interpretation, species candidates, CAAB-assisted reasoning and officer dialogue. It is not the sole detector or counter. This adaptive routing and ledger contract are production gates; the current v4 batch-counting output remains advisory test evidence.
+
 The demo's current contiguous segmentation has no overlap because it is validating the bounded request/retry mechanism. Overlap, track stitching and multi-camera de-duplication are production gates before counts can be relied on across an entire drive.
 
 The live demo now checkpoints after at most six new Gemini windows per browser request. The page saves progress, reloads, and automatically continues the next batch; if the browser closes, the same action appears as **Continue analysis**. A request with no committed progress for seven minutes becomes resumable and its earlier validated window responses are reused. This prevents the five-minute gateway timeout observed during the first 41-window Jake run from forcing a whole-video restart.
@@ -432,14 +442,17 @@ Every review card displays its complete evidence window as `MM:SS–MM:SS`, not 
 
 The event action is labelled **Review / correct**. It opens a segment-focused workspace rather than a one-shot correction prompt:
 
-- a YouTube source is embedded with the relevant stored-segment start/end bounds; the public player is for officer navigation, while Gemini continues to inspect the stored visual-only rendition;
-- the officer can seek in five-second steps, mark absolute source-video start/end times, ask questions, challenge a count or species, and add further evidence turns;
+- the exact stored visual-only segment rendition is loaded into an authenticated browser video player. A time-bounded YouTube source preview is used only when the retained rendition is unavailable or cannot be played;
+- the officer can seek in five-second steps, mark absolute source-video start/end times and optionally attach that range to a chat turn. Timestamp evidence is presented as a normal chat attachment rather than an implicit field on every message;
+- the conversation follows the AI Hub Task Adviser interaction contract: human turns align right, agent turns use the full width, the composer stays at the bottom, Enter sends, Shift+Enter adds a line, the submitted turn appears and clears immediately, and a prominent in-thread thinking state plus send-button spinner remains visible until the non-streaming APEX request completes;
 - reviewer messages, agent responses, timestamps, tool arguments/outcomes and structured proposals persist in AIDEMODB across page reloads and browser sessions;
 - the agent can read the current observation, request fresh bounded visual analysis, search active CAAB taxa and prepare a corrected finding. Every tool call is allow-listed and audited;
 - model/tool results remain advisory. The agent cannot confirm a result or make a compliance finding. Only **Accept corrected finding** / **Save officer decision** writes the visible species/CAAB, count, evidence range and interaction classification through the deterministic review API; and
 - **Keep current result** closes the studio without a write, while **Escalate** requires an officer note and records the normal escalation decision.
 
 The structured finding panel is always editable. This makes a manual officer correction explicit rather than hiding it behind an ambiguous “save” button, while still allowing the officer and AI to investigate what went wrong first. A draft agent proposal never silently changes the current observation, prior human decision or another segment. The same review session can be reopened to continue the conversation with its complete history.
+
+For the controlled demo, authenticated stored-segment playback is transferred through the existing page Ajax process as a base64-encoded BLOB and converted to a browser object URL. This is suitable for the short, low-bitrate analysis renditions already held in AIDEMODB, but is not the production-scale delivery pattern. Production should use private object storage with short-lived authorised URLs and byte-range support so long recordings are not copied through an APEX JSON response.
 
 The reconciliation page is an operation register with filters and three columns: **frozen reported information**, **video evidence**, and **AFMA reviewer finding/action**. Each row shows a comparison outcome and links back to both the source report version and supporting clip. A footer enables `Complete review` only when critical alerts have a reviewed state. A guidance drawer provides source, applicability, review date, current concession conditions and relevant logbook instructions.
 
