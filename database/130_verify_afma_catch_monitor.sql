@@ -337,6 +337,22 @@ select count(*) review_studio_package_line_count
    and type = 'PACKAGE BODY'
    and text like '%cmReviewStudioDialog%';
 
+select count(*) review_studio_ai_hub_chat_contract_count
+  from user_source
+ where name in ('AFMA_CM_PAGE_API','AFMA_CM_REVIEW_AGENT_API')
+   and type = 'PACKAGE BODY'
+   and (text like '%hub-task-adviser-thread%'
+        or text like '%hub-task-adviser-message%'
+        or text like '%hub-task-adviser-composer%');
+
+select count(*) review_studio_direct_accept_handler_count
+  from user_source
+ where name = 'AFMA_CM_PAGE_API'
+   and type = 'PACKAGE BODY'
+   and instr(text, 'cmStudioAccept') > 0
+   and instr(text, 'ACCEPT_REVIEW_PROPOSAL') > 0
+   and instr(text, 'apex.message.confirm') = 0;
+
 select count(*) review_agent_tool_contract_count
   from user_source
  where name = 'AFMA_CM_REVIEW_AGENT_API'

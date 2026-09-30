@@ -308,3 +308,11 @@ Captured from AIDEMODB workspace `AFMA` on 2026-09-29 after the prompt-driven co
 - Repository-safe APEXlang Standard Export: `exports/apex/afma/101/20260929-after-caab-016-prompted-reanalysis-apexlang-standard-export/`
 - The export is application-identical to the immediately preceding segment-reanalysis checkpoint because the new workbench controls are emitted by the database-owned `AFMA_CM_PAGE_API`; the dated checkpoint proves the live app remained exportable after deployment.
 - Live verification found both Catch Monitor packages valid, the fixed reviewer-guidance wrapper present, 16 of 16 Life segment renditions available, the full-video action enabled, the event-level manual/AI correction dialog available, and no rendered APEX errors. No Gemini retry was initiated during verification so the editable prompt remains available for human review first.
+
+Captured from AIDEMODB workspace `AFMA` on 2026-09-30 after the Evidence Review acceptance and customer-readiness stabilization increment for `caab-016`:
+
+- Repository-safe APEXlang Standard Export: `exports/apex/afma/101/20260930-after-caab-016-accept-flow-ai-hub-chat-stability-apexlang-standard-export/`.
+- The export excludes workspace credentials, workspace Generative AI Service definitions and benchmark MP4s; the generated demo-login password literal is redacted. Page 4 differs from the prior checkpoint only by APEXlang whitespace because the live UI remains emitted by database-owned `AFMA_CM_PAGE_API`.
+- Live acceptance verification used Evidence Review session `21`, corrected the proposal's interaction classification to `NOT_APPLICABLE`, saved count `7` for `00:34–00:49`, closed the dialog, retained `CM-SUB-5c84fad631eb`, refreshed the event to `CORRECTED` and recorded the officer audit note.
+- Customer-readiness regression covered all seven selectable scenarios plus Home, CSIRO CAAB Agent and CAAB Reports. Every scenario retained its selected value, description, playback surface and matching evidence-card/stat count; no APEX errors, browser leave-page prompts or navigation dialogs were observed.
+- The full 31-statement Catch Monitor verifier passed; `AFMA_CM_PAGE_API` and `AFMA_CM_REVIEW_AGENT_API` are valid, the embedded JavaScript parses, and the temporary chunked-deployment staging table was removed.
