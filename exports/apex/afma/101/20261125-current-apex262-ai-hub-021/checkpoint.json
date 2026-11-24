@@ -1,0 +1,243 @@
+{
+  "project": "caab",
+  "task": "ai-hub-021",
+  "workspace": "AFMA",
+  "applicationId": 101,
+  "exportedAtUtc": "2026-11-24T22:46:30.557113+00:00",
+  "rawNativeSha256": "f190234ac99d1f1eaae797b6efe3966939cf43fb0ae00352287c84ebb0ed3a65",
+  "nativeExportMetadata": {
+    "mmdVersion": "26.2.0+3479"
+  },
+  "checkpointPath": "exports/apex/afma/101/20261125-current-apex262-ai-hub-021",
+  "repositoryUrl": "https://github.com/paulashcroft-oracle/afma-demos",
+  "files": [
+    {
+      "path": "shared-components/themes/universal-theme/theme.apx",
+      "bytes": 1619,
+      "sha256": "f3b9b755873dfa60e9390074a3885a2728da892c63c9e6532b02f3207a496c1c"
+    },
+    {
+      "path": "shared-components/component-settings.apx",
+      "bytes": 1309,
+      "sha256": "be206cc14e55641f16488cbe0d9234d041c06ddfeaa310991a75aa8525f64d6e"
+    },
+    {
+      "path": "shared-components/build-options.apx",
+      "bytes": 55,
+      "sha256": "7ef00e7965aa790792017617c083a91af4bd6f0f29e6a717c8792438c9a12b58"
+    },
+    {
+      "path": "shared-components/authentications.apx",
+      "bytes": 101,
+      "sha256": "4b525f3023225c4f91b53c58fabec81ef146d5dfabd1c677cb7c71866d179382"
+    },
+    {
+      "path": "shared-components/authorizations.apx",
+      "bytes": 256,
+      "sha256": "ebb959b32997340cbadedc08d1a97b5f5d3d6833cda33c24d47137024c76a57b"
+    },
+    {
+      "path": "shared-components/static-files.apx",
+      "bytes": 911,
+      "sha256": "a0780ddc47d53097da452cf0e10b3372e57645edde6e7f63cf396b3710c2613b"
+    },
+    {
+      "path": "shared-components/ai-agents/cohere-command-latest.apx",
+      "bytes": 950,
+      "sha256": "ae5606d4d89f3338a3c353c27873ed297ddf34e23b872deb7c470d0b1ce11e42"
+    },
+    {
+      "path": "shared-components/ai-agents/cohere-command-plus-latest.apx",
+      "bytes": 970,
+      "sha256": "a00677bb772730793a90e55943c9d4eb3cfd51e0cf5e7f560bd709cfc48c33ad"
+    },
+    {
+      "path": "shared-components/ai-agents/google-gemini-2-5-flash.apx",
+      "bytes": 958,
+      "sha256": "8ff9f8aa47d97cde6659d95b1b5e4b269cc8bdceae6583208ff7fcda5a15a04c"
+    },
+    {
+      "path": "shared-components/ai-agents/google-gemini-2-5-flash-lite.apx",
+      "bytes": 978,
+      "sha256": "f575ba229c84fa2c1927b92aae252377c3fceaa73d76e45caa8d41c52bc90594"
+    },
+    {
+      "path": "shared-components/ai-agents/google-gemini-2-5-pro.apx",
+      "bytes": 950,
+      "sha256": "10ed7d2ea29120a35afbc7bd7eb2c88ba96712ed653bc2831b591613ca9659ac"
+    },
+    {
+      "path": "shared-components/ai-agents/openai-gpt-oss-120b.apx",
+      "bytes": 942,
+      "sha256": "7f81dd3205dd2ba186cb270d3dcaec9b283d57699452a59d5b0b8fad8d927ba2"
+    },
+    {
+      "path": "shared-components/ai-agents/openai-gpt-oss-20b.apx",
+      "bytes": 938,
+      "sha256": "fcd3f38f859d7d568c751661aabc421f28ba39d1f3461e7f204c22513d556324"
+    },
+    {
+      "path": "shared-components/ai-agents/xai-grok-4-20-reasoning.apx",
+      "bytes": 958,
+      "sha256": "85cbeede196e088bd49227380b46e5a12f164dfaa38fe97d67cc8609342bcaef"
+    },
+    {
+      "path": "shared-components/ai-agents/xai-grok-4-3.apx",
+      "bytes": 914,
+      "sha256": "95dd2b4daca36e2b08f7d63989d3f8ef2303c91ab1275e2ca20e30ff90978bf3"
+    },
+    {
+      "path": "shared-components/breadcrumbs/breadcrumb.apx",
+      "bytes": 254,
+      "sha256": "24de194b3601823b413812ef326f0d23d3ade448430b43046a5c3ab3493280ab"
+    },
+    {
+      "path": "shared-components/lists/navigation-bar.apx",
+      "bytes": 1764,
+      "sha256": "c4552adb0f923a86fd32f96cfc824faf81f618be8765a3495a191cda3a42c8c8"
+    },
+    {
+      "path": "shared-components/lists/navigation-menu.apx",
+      "bytes": 300,
+      "sha256": "a2056005a75086bc5c6072f54fd9310c33e0a00ba4c4f7d72336308de93a11fe"
+    },
+    {
+      "path": "shared-components/lovs/feedback-rating.apx",
+      "bytes": 989,
+      "sha256": "1b4da2a18d8769315e26c9e97729baa43bfea52c1e9d487323ad423c4c63a9af"
+    },
+    {
+      "path": "page-groups.apx",
+      "bytes": 55,
+      "sha256": "46d760ce3168fd934b0ba382a31c4eb59187579edc85939cd0bfcef8832eee65"
+    },
+    {
+      "path": "pages/p00000-global-page.apx",
+      "bytes": 92,
+      "sha256": "3256e6113b033c6bc3a6ce9076fff1e70a8ff635cb11dc9b4aba5a1a9e5a1053"
+    },
+    {
+      "path": "pages/p00001-home.apx",
+      "bytes": 611,
+      "sha256": "67816d26bd79f767a44b53807b7cc7b6adc1c85d5140133e1b721fb45ec3468b"
+    },
+    {
+      "path": "pages/p00002-csiro-caab-agent.apx",
+      "bytes": 1334,
+      "sha256": "f0d7a3fdbfca5826546d23ea8adf7cb98ff3cef57d014f5597a3e95d385c02e2"
+    },
+    {
+      "path": "pages/p00003-reports.apx",
+      "bytes": 19813,
+      "sha256": "9e8ee780d476776c57628d2e83c707076f060dd1a0eae8baf556fe8d6ed0b20b"
+    },
+    {
+      "path": "pages/p00004-catch-monitor.apx",
+      "bytes": 30102,
+      "sha256": "c9f77c4dfe029d6876e1277f0a9e5863e979ee0dc9e2eceb4dadde86db1418c8"
+    },
+    {
+      "path": "pages/p09999-login.apx",
+      "bytes": 8118,
+      "sha256": "b6475847ca5622b9588c180aa5b8c28c0a9a39c6b06b55a4fff850e764ea7e88"
+    },
+    {
+      "path": "pages/p10030-feedback.apx",
+      "bytes": 6393,
+      "sha256": "31cd6c430e501cc0c5337ccddf0fbcefd82aa0933b9e42df599d6064bbfb796e"
+    },
+    {
+      "path": "pages/p10031-feedback-submitted.apx",
+      "bytes": 1600,
+      "sha256": "552079d93a84a43d68e15bf5dc50bd7046f36c614e6d8b7dbfe90ef520e5cbd4"
+    },
+    {
+      "path": "application.apx",
+      "bytes": 1128,
+      "sha256": "d2a455c80406b122cb17f00a455d426a249a154d75e960993e7c9bf8c274de2b"
+    },
+    {
+      "path": "shared-components/static-files/icons/app-icon-32.png",
+      "bytes": 628,
+      "sha256": "a270d14256aa9aee0b84c818f1bb5f3db5ebb4be2cf01b6a9bb32da61788ce3d"
+    },
+    {
+      "path": "shared-components/static-files/caab-agent.js",
+      "bytes": 12037,
+      "sha256": "ada27753bfe350482d7d4be3846a3af175218e15326d7c4e2fa6fab6158d1cb5"
+    },
+    {
+      "path": "shared-components/static-files/caab.css",
+      "bytes": 8993,
+      "sha256": "a2ec5c7bd46319258fe62f0b69fb47f12259f18cf477c64d71a5bc45bcfb032a"
+    },
+    {
+      "path": "shared-components/static-files/icons/app-icon-144-rounded.png",
+      "bytes": 4770,
+      "sha256": "040602f4fbecfd29e4ed3e404a272ef0f96afe2434331c03b1c2c0d903d80f48"
+    },
+    {
+      "path": "shared-components/static-files/icons/app-icon-192.png",
+      "bytes": 5922,
+      "sha256": "f435dc99830605f72799f2304d24a8d33c87be0ebf5dc8b33f993c40a823a9e4"
+    },
+    {
+      "path": "shared-components/static-files/icons/app-icon-256-rounded.png",
+      "bytes": 9825,
+      "sha256": "2f9039ce616b1b28134b4f8343231ff6cd05b2ff0244232aaa8d4c296f391c2e"
+    },
+    {
+      "path": "shared-components/static-files/icons/app-icon-512.png",
+      "bytes": 22867,
+      "sha256": "893b35c54646a5bc3f48f17c332f6f1e2c78db0355cd04f8603cd8cc7e46b843"
+    },
+    {
+      "path": "deployments/default.json",
+      "bytes": 214,
+      "sha256": "17bb675ef5df1c49e4bb44529a0b25c14dcf529a6391b363f1e023342b7eb823"
+    },
+    {
+      "path": ".apex/apexlang.json",
+      "bytes": 34,
+      "sha256": "1e4d481e2b249e9579fb0e21ec7534b535573b7534e53ec8d8f7b204d841a101"
+    }
+  ],
+  "excludedWorkspaceDefinitions": [
+    "workspace-components/credentials/genai-credentials.apx",
+    "workspace-components/generative-ai-services/cohere-command-latest.apx",
+    "workspace-components/generative-ai-services/cohere-command-plus-latest.apx",
+    "workspace-components/generative-ai-services/google-gemini-2-5-flash.apx",
+    "workspace-components/generative-ai-services/google-gemini-2-5-flash-lite.apx",
+    "workspace-components/generative-ai-services/google-gemini-2-5-pro.apx",
+    "workspace-components/generative-ai-services/openai-gpt-oss-120b.apx",
+    "workspace-components/generative-ai-services/openai-gpt-oss-20b.apx",
+    "workspace-components/generative-ai-services/xai-grok-4-20-reasoning.apx",
+    "workspace-components/generative-ai-services/xai-grok-4-3.apx"
+  ],
+  "privateBinaryAssets": [
+    {
+      "path": "shared-components/static-files/benchmarks/afma-west-moore-clip-d.mp4",
+      "bytes": 26028494,
+      "sha256": "9cc77dfeea8bc39d04dfec586e13458ace9b590e221a58e96dbd460d58e8134a"
+    },
+    {
+      "path": "shared-components/static-files/benchmarks/afma-west-moore-clip-b.mp4",
+      "bytes": 13286812,
+      "sha256": "b6349e5ffa10cdd4bdca080cace3f243a5569ac8d9d8546838c12ce836352525"
+    },
+    {
+      "path": "shared-components/static-files/benchmarks/afma-west-moore-clip-a.mp4",
+      "bytes": 27642042,
+      "sha256": "59086f81abbda5c7e77ba7b6a7f6c175591b057e04a3cb6396c07aeadcecb89c"
+    },
+    {
+      "path": "shared-components/static-files/benchmarks/afma-west-moore-clip-c.mp4",
+      "bytes": 31892501,
+      "sha256": "0963a5d6ea15c29ad83e9978451d0d7fb2a1c55218e4966b33def0b66957d195"
+    }
+  ],
+  "redactions": [],
+  "restore": "Restore this checkpoint source/ tree at the recorded Git commit. Provision excluded workspace credentials and GenAI service prerequisites through the project runbook. Reapply redacted activation values through approved secret storage. Binary assets omitted from ordinary Git remain byte-hashed in private native recovery ZIP, retained under AI Hub task ai-hub-021 run 20261125-apex262-exports/native/<project>-<app>.zip; this source checkpoint alone is not a complete binary backup.",
+  "fileCount": 38,
+  "totalBytes": 150652
+}
